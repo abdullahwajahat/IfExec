@@ -11,6 +11,7 @@
 
     <name>IfExec</name>
     <description>A Paper plugin to run commands when players enter coordinates or regions.</description>
+
     <properties>
         <java.version>21</java.version>
         <paper.api.version>1.21.8-R0.1-SNAPSHOT</paper.api.version>
@@ -47,7 +48,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Shade plugin -->
+            <!-- Optional: Shade plugin ONLY for dependencies -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -55,13 +56,18 @@
                 <executions>
                     <execution>
                         <phase>package</phase>
-                        <goals><goal>shade</goal></goals>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
                         <configuration>
                             <relocations>
+                                <!-- Example: relocate only external libraries, NOT your main package -->
+                                <!--
                                 <relocation>
-                                    <pattern>com.ifexec</pattern>
-                                    <shadedPattern>com.ifexec.shaded</shadedPattern>
+                                    <pattern>org.some.library</pattern>
+                                    <shadedPattern>com.ifexec.libs.library</shadedPattern>
                                 </relocation>
+                                -->
                             </relocations>
                         </configuration>
                     </execution>
