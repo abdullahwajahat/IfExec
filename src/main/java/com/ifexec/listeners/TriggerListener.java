@@ -25,10 +25,9 @@ public class TriggerListener implements Listener {
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent e) {
-        if (e.getFrom() == null || e.getTo() == null) return;
-        if (e.getFrom().getBlockX() == e.getTo().getBlockX() &&
-            e.getFrom().getBlockY() == e.getTo().getBlockY() &&
-            e.getFrom().getBlockZ() == e.getTo().getBlockZ()) return; // only when block position changed
+        if (e.getFrom().getBlockX() == e.getTo().getBlockX()
+            && e.getFrom().getBlockY() == e.getTo().getBlockY()
+            && e.getFrom().getBlockZ() == e.getTo().getBlockZ()) return; // only on block change
 
         Player p = e.getPlayer();
         List<Trigger> found = triggerManager.findByLocation(p.getLocation());
@@ -43,13 +42,13 @@ public class TriggerListener implements Listener {
                 continue;
             }
 
-            // cooldown
+            // cooldown check
             if (!t.canTrigger(p.getUniqueId(), defaultCd)) {
                 if (!t.isSilent()) p.sendMessage(messages.get("cooldown_active"));
                 continue;
             }
 
-            // execute commands (as console), replacing selectors/placeholders
+            // execute commands
             for (String raw : t.getCommands()) {
                 if (raw == null || raw.isBlank()) continue;
                 String cmd = raw.replace("@p", p.getName()).replace("@s", p.getName());
@@ -70,7 +69,7 @@ public class TriggerListener implements Listener {
                 if (p.hasPermission("ifexec.staff") && t.getMessages().containsKey("staff")) sendMsg = t.getMessages().get("staff");
                 if (sendMsg == null && t.getMessages().containsKey("all")) sendMsg = t.getMessages().get("all");
                 if (sendMsg == null) sendMsg = messages.get("trigger_created");
-                p.sendMessage(MessagesUtil.color(messages.get("plugin_prefix") + sendMsg.replace("{name}", t.getName())));
+                p.sendMessage(messages.get("plugin_prefix").replace("&","§") + org.bukkit.ChatColor.translateAlternateColorCodes('&', sendMsg.replace("{name}", t.getName())));
             }
         }
     }
