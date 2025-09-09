@@ -1,6 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.ifexec</groupId>
@@ -10,17 +11,21 @@
 
     <name>IfExec</name>
     <description>A Paper plugin to run commands when players enter coordinates or regions.</description>
-
     <properties>
-        <!-- Java + PaperMC version -->
         <java.version>21</java.version>
-        <paper.api.version>1.21.1-R0.1-SNAPSHOT</paper.api.version>
+        <paper.api.version>1.21.8-R0.1-SNAPSHOT</paper.api.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>papermc-repo</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
+    </repositories>
+
     <dependencies>
-        <!-- Paper API -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
@@ -42,7 +47,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Shade plugin: bundle plugin into one jar -->
+            <!-- Shade plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -50,12 +55,9 @@
                 <executions>
                     <execution>
                         <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
+                        <goals><goal>shade</goal></goals>
                         <configuration>
                             <relocations>
-                                <!-- Optional: avoid conflicts if you add libs later -->
                                 <relocation>
                                     <pattern>com.ifexec</pattern>
                                     <shadedPattern>com.ifexec.shaded</shadedPattern>
