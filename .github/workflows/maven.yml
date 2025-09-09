@@ -33,7 +33,7 @@ jobs:
       run: mvn clean package
 
     - name: Upload compiled JAR
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: IfExec-jar
         path: target/IfExec-1.0.0.jar
