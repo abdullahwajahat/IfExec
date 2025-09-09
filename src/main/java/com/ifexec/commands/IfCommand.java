@@ -14,6 +14,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -34,6 +35,7 @@ public class IfCommand implements CommandExecutor {
     private void sendPref(CommandSender s, String key) {
         s.sendMessage(messages.get(key));
     }
+
     private void sendPref(CommandSender s, String key, Map<String,String> ph) {
         String out = messages.get(key);
         for (Map.Entry<String,String> e : ph.entrySet()) out = out.replace("{" + e.getKey() + "}", e.getValue());
@@ -46,6 +48,7 @@ public class IfCommand implements CommandExecutor {
             sender.sendMessage(messages.get("plugin_prefix") + "§eIfExec: use /if help");
             return true;
         }
+
         String sub = args[0].toLowerCase();
         try {
             switch (sub) {
@@ -100,9 +103,6 @@ public class IfCommand implements CommandExecutor {
 
     // ---------- CREATE ----------
     private void handleCreate(CommandSender sender, String[] args) {
-        // support both forms:
-        // /if <selector> on ... then ...
-        // /if on ... then ... (selector defaults to @s if player)
         int idx = 0;
         String selector;
         String mode;
@@ -138,7 +138,6 @@ public class IfCommand implements CommandExecutor {
         List<String> tail = new ArrayList<>();
         for (int i = thenIndex+1; i < args.length; i++) tail.add(args[i]);
 
-        // detect optional name/role in tail
         String name = null; String role = "all";
         int nameIdx = -1, roleIdx = -1;
         for (int i=0;i<tail.size();i++) {
@@ -156,7 +155,7 @@ public class IfCommand implements CommandExecutor {
         if (roleIdx != -1 && roleIdx +1 < tail.size()) role = tail.get(roleIdx +1).toLowerCase();
         if (!role.equals("staff") && !role.equals("all")) role = "all";
 
-        List<String> commands = commandTokens.stream().map(s -> stripQuotes(s)).filter(s -> !s.isBlank()).collect(Collectors.toList());
+        List<String> commands = commandTokens.stream().map(this::stripQuotes).filter(s -> !s.isBlank()).collect(Collectors.toList());
         if (commands.isEmpty()) { sender.sendMessage(messages.get("plugin_prefix") + "§cNo commands provided."); return; }
 
         Trigger t = new Trigger();
@@ -212,14 +211,6 @@ public class IfCommand implements CommandExecutor {
             if (!triggerManager.exists(n)) return n;
             i++;
         }
-    }
-
-    private String stripQuotes(String s) {
-        s = s.trim();
-        if ((s.startsWith("\"") && s.endsWith("\"")) || (s.startsWith("'") && s.endsWith("'"))) {
-            return s.substring(1, s.length()-1);
-        }
-        return s;
     }
 
     // ---------- LIST ----------
@@ -347,83 +338,48 @@ public class IfCommand implements CommandExecutor {
                     } catch (NumberFormatException ex) { sender.sendMessage(messages.get("plugin_prefix") + "§cInvalid number."); return; }
                 }
                 break;
-            case "world":
-                if (args.length < 4) { sender.sendMessage(messages.get("plugin_prefix") + "§cUsage: /if edit <name> world <world>"); return; }
-                t.setWorld(args[3]);
+            case "role":
+                if (args.length < 4) { sender.sendMessage(messages.get("plugin_prefix") + "§cUsage: /if edit <name> role <staff|all>"); return; }
+                String r = args[3].toLowerCase();
+                if (!r.equals("staff") && !r.equals("all")) r = "all";
+                t.setRole(r);
                 break;
+            case "command":
             case "commands":
-                if (args.length >= 4 && args[3].equalsIgnoreCase("clear")) {
-                    t.setCommands(new ArrayList<>());
-                    triggerManager.add(t);
-                    Map<String,String> ph = new HashMap<>(); ph.put("name", name); sendPref(sender, "commands_cleared", ph);
-                    return;
-                }
-                if (args.length >= 5 && isInteger(args[3])) {
-                    int line = Integer.parseInt(args[3]);
-                    if (line <= 0 || line > t.getCommands().size()) { sender.sendMessage(messages.get("plugin_prefix") + "§cInvalid line number."); return; }
-                    String newCmd = joinArgs(args, 4);
-                    newCmd = stripQuotes(newCmd);
-                    t.getCommands().set(line-1, newCmd);
-                    triggerManager.add(t);
-                    Map<String,String> ph = new HashMap<>(); ph.put("name", name); sendPref(sender, "trigger_edited", ph);
-                    return;
-                }
-                List<String> cmds = new ArrayList<>();
-                for (int i=3;i<args.length;i++) cmds.add(stripQuotes(args[i]));
+                if (args.length < 4) { sender.sendMessage(messages.get("plugin_prefix") + "§cUsage: /if edit <name> command <cmd1>; <cmd2>; ..."); return; }
+                String joined = String.join(" ", Arrays.copyOfRange(args,3,args.length));
+                List<String> cmds = Arrays.stream(joined.split(";")).map(this::stripQuotes).filter(s -> !s.isBlank()).collect(Collectors.toList());
+                if (cmds.isEmpty()) { sender.sendMessage(messages.get("plugin_prefix") + "§cNo commands provided."); return; }
                 t.setCommands(cmds);
                 break;
-            case "addcommand":
-                if (args.length < 4) { sender.sendMessage(messages.get("plugin_prefix") + "§cUsage: /if edit <name> addcommand \"cmd\""); return; }
-                String toAdd = stripQuotes(joinArgs(args, 3));
-                t.getCommands().add(toAdd);
-                break;
-            case "removecommand":
-                if (args.length < 4 || !isInteger(args[3])) { sender.sendMessage(messages.get("plugin_prefix") + "§cUsage: /if edit <name> removecommand <line>"); return; }
-                int rem = Integer.parseInt(args[3]);
-                if (rem <= 0 || rem > t.getCommands().size()) { sender.sendMessage(messages.get("plugin_prefix") + "§cInvalid line number."); return; }
-                t.getCommands().remove(rem-1);
-                break;
-            case "role":
-                if (args.length < 4) { sender.sendMessage(messages.get("plugin_prefix") + "§cUsage: /if edit <name> role staff|all"); return; }
-                String r = args[3].toLowerCase(); if (!r.equals("staff") && !r.equals("all")) r = "all"; t.setRole(r);
-                break;
             case "cooldown":
-                if (args.length < 4 || !isInteger(args[3])) { sender.sendMessage(messages.get("plugin_prefix") + "§cUsage: /if edit <name> cooldown <seconds>"); return; }
-                t.setCooldown(Integer.parseInt(args[3]));
+                if (args.length < 4) { sender.sendMessage(messages.get("plugin_prefix") + "§cUsage: /if edit <name> cooldown <seconds>"); return; }
+                try { t.setCooldown(Integer.parseInt(args[3])); } catch (NumberFormatException ex) { sender.sendMessage(messages.get("plugin_prefix") + "§cInvalid number."); return; }
                 break;
             case "silent":
-                if (args.length < 4) { sender.sendMessage(messages.get("plugin_prefix") + "§cUsage: /if edit <name> silent true|false"); return; }
+                if (args.length < 4) { sender.sendMessage(messages.get("plugin_prefix") + "§cUsage: /if edit <name> silent <true|false>"); return; }
                 t.setSilent(Boolean.parseBoolean(args[3]));
                 break;
-            case "message":
-                if (args.length < 5) { sender.sendMessage(messages.get("plugin_prefix") + "§cUsage: /if edit <name> message staff|all \"text\""); return; }
-                String who = args[3].toLowerCase(); if (!who.equals("staff") && !who.equals("all")) who = "all";
-                String m = stripQuotes(joinArgs(args, 4));
-                t.getMessages().put(who, m);
-                break;
             default:
-                sender.sendMessage(messages.get("plugin_prefix") + "§cUnknown field. Allowed: coords, world, commands, addcommand, removecommand, role, cooldown, silent, message");
+                sender.sendMessage(messages.get("plugin_prefix") + "§cUnknown field: " + field);
                 return;
         }
-
         triggerManager.add(t);
         Map<String,String> ph = new HashMap<>(); ph.put("name", name); sendPref(sender, "trigger_edited", ph);
     }
 
     // ---------- UNDO ----------
     private void handleUndo(CommandSender sender) {
-        Optional<Trigger> ot = undoManager.pop();
-        if (ot.isEmpty()) {
-            sendPref(sender, "undo_empty");
-            return;
-        }
-        Trigger t = ot.get();
+        Optional<Trigger> tOpt = undoManager.pop();
+        if (tOpt.isEmpty()) { sender.sendMessage(messages.get("plugin_prefix") + "§cNothing to undo."); return; }
+        Trigger t = tOpt.get();
         triggerManager.add(t);
-        Map<String,String> ph = new HashMap<>(); ph.put("name", t.getName()); sendPref(sender, "undo_success", ph);
+        Map<String,String> ph = new HashMap<>(); ph.put("name", t.getName());
+        sendPref(sender, "trigger_restored", ph);
     }
 
-    // ---------- Helpers ----------
-    private boolean isInteger(String s) { try { Integer.parseInt(s); return true; } catch (Exception e) { return false; } }
-    private String joinArgs(String[] args, int start) { StringBuilder sb = new StringBuilder(); for (int i=start;i<args.length;i++){ if (i>start) sb.append(' '); sb.append(args[i]); } return sb.toString(); }
-    private String stripQuotes(String s) { s = s.trim(); if ((s.startsWith("\"") && s.endsWith("\"")) || (s.startsWith("'") && s.endsWith("'"))) return s.substring(1, s.length()-1); return s; }
+    private String stripQuotes(String s) {
+        if (s.startsWith("\"") && s.endsWith("\"") && s.length()>=2) return s.substring(1,s.length()-1);
+        return s;
+    }
 }
