@@ -10,10 +10,10 @@
   <packaging>jar</packaging>
 
   <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.target>17</maven.compiler.target>
-    <paper.version>1.20.6-R0.1-SNAPSHOT</paper.version>
+    <java.version>17</java.version>
+    <maven.compiler.source>${java.version}</maven.compiler.source>
+    <maven.compiler.target>${java.version}</maven.compiler.target>
+    <paper.version>1.20.4-R0.1-SNAPSHOT</paper.version>
   </properties>
 
   <repositories>
@@ -28,6 +28,13 @@
       <groupId>io.papermc.paper</groupId>
       <artifactId>paper-api</artifactId>
       <version>${paper.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- Bungee chat components (for clickable messages) -->
+    <dependency>
+      <groupId>net.md-5</groupId>
+      <artifactId>bungeecord-chat</artifactId>
+      <version>1.16-R0.4</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>
