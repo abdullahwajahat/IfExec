@@ -1,2 +1,5 @@
-undo_timeout: 30   # seconds before undo expires
-undo_limit: 2      # how many removals can be undone (history depth)
+default_cooldown: 3
+undo_timeout: 30
+undo_limit: 2
+
+triggers: {}
