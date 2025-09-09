@@ -1,0 +1,14 @@
+name: IfExec
+version: 1.0.0
+main: me.yourname.ifexec.IfExec
+api-version: 1.20
+author: YourName
+commands:
+  if:
+    description: Main IfExec command
+    usage: /if <args>
+    aliases: [ifexec]
+permissions:
+  ifexec.admin:
+    description: Allows full use of IfExec commands
+    default: op
