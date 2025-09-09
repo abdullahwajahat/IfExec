@@ -14,7 +14,9 @@ public class ConfigManager {
     public ConfigManager(IfExec plugin) {
         this.plugin = plugin;
         dataFile = new File(plugin.getDataFolder(), "config.yml");
-        if (!dataFile.exists()) plugin.saveResource("config.yml", false);
+        if (!dataFile.exists()) {
+            plugin.saveResource("config.yml", false);
+        }
         dataConfig = YamlConfiguration.loadConfiguration(dataFile);
     }
 
