@@ -1,4 +1,3 @@
-# prefix uses & color codes; leave empty "" to disable
 plugin_prefix: "&7[&eIfExec&7] "
 
 undo_success: "&a✔ Trigger &f{name} &ahas been restored successfully!"
