@@ -1,0 +1,13 @@
+plugin_prefix: "§7[§eIfExec§7] "
+
+undo_success: "§a✔ Trigger §f{name} §ahas been restored successfully!"
+undo_expired: "§e⚠ §cUndo expired — trigger cannot be restored."
+undo_empty: "§c✖ No trigger available to undo."
+
+no_permission: "§c✖ You don’t have permission to use this command."
+trigger_created: "§a✔ Trigger §f{name} §ahas been created."
+trigger_removed: "§c✖ Trigger §f{name} §chas been removed."
+trigger_edited: "§e✎ Trigger §f{name} §ehas been updated."
+cooldown_active: "§e⏳ Please wait before reusing this trigger!"
+staff_only: "§c✖ This trigger is for staff only."
+member_only: "§c✖ This trigger is for members only."
