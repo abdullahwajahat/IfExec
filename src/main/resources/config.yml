@@ -1,0 +1,2 @@
+undo_timeout: 30   # seconds before undo expires
+undo_limit: 2      # how many removals can be undone (history depth)
