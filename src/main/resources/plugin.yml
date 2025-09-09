@@ -1,14 +1,22 @@
 name: IfExec
+main: com.ifexec.IfExec
 version: 1.0.0
-main: me.yourname.ifexec.IfExec
 api-version: 1.20
-author: YourName
+authors: ["IfExecAuthor"]
 commands:
   if:
-    description: Main IfExec command
-    usage: /if <args>
-    aliases: [ifexec]
+    description: Create and manage conditional triggers
+    aliases: [triggerif, cond]
+    usage: /if
+    permission: ifexec.use
+    permission-message: "&cYou don't have permission to use IfExec."
 permissions:
+  ifexec.use:
+    description: Use basic IfExec commands
+    default: true
   ifexec.admin:
-    description: Allows full use of IfExec commands
+    description: Admin commands for IfExec
     default: op
+  ifexec.staff:
+    description: Marks a player as staff for staff-only triggers
+    default: false
