@@ -42,10 +42,9 @@ public class TriggerManager {
             t.setCooldown(s.getInt("cooldown", -1));
             t.setSilent(s.getBoolean("silent", false));
             t.setRole(s.getString("role", "all"));
-
             if (s.isConfigurationSection("messages")) {
                 ConfigurationSection ms = s.getConfigurationSection("messages");
-                Map<String, String> map = new HashMap<>();
+                Map<String,String> map = new HashMap<>();
                 for (String mk : ms.getKeys(false)) map.put(mk, ms.getString(mk));
                 t.setMessages(map);
             }
@@ -73,7 +72,7 @@ public class TriggerManager {
             cfg.set(base + "silent", t.isSilent());
             cfg.set(base + "role", t.getRole());
             if (t.getMessages() != null && !t.getMessages().isEmpty()) {
-                for (Map.Entry<String, String> me : t.getMessages().entrySet()) {
+                for (Map.Entry<String,String> me : t.getMessages().entrySet()) {
                     cfg.set(base + "messages." + me.getKey(), me.getValue());
                 }
             }
