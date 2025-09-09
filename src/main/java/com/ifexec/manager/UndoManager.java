@@ -40,6 +40,4 @@ public class UndoManager {
         if (stack.isEmpty()) return Optional.empty();
         return Optional.of(stack.pop());
     }
-
-    public boolean isEmpty() { return stack.isEmpty(); }
 }
