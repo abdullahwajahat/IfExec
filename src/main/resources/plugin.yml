@@ -2,26 +2,26 @@ name: IfExec
 version: 1.0.0
 main: com.ifexec.IfExec
 api-version: 1.21
-description: Run commands when players enter coordinates or regions.
+description: "Run commands when players enter coordinates or regions."
 authors: ["IfExecAuthor"]
 
 commands:
   if:
-    description: Create and manage conditional triggers
-    usage: /if <help|list|listall|remove|disable|enable|edit|undo>
+    description: "Create and manage conditional triggers"
+    usage: "/if <help|list|listall|remove|disable|enable|edit|undo>"
     aliases: [triggerif, cond]
     permission: ifexec.use
     permission-message: "§cYou do not have permission to use IfExec commands."
 
 permissions:
   ifexec.use:
-    description: Allows usage of basic IfExec commands
+    description: "Allows usage of basic IfExec commands"
     default: true
 
   ifexec.admin:
-    description: Allows full control of triggers: remove, edit, listall
+    description: "Allows full control of triggers: remove, edit, listall"
     default: op
 
   ifexec.staff:
-    description: Required to run triggers restricted to staff role
+    description: "Required to run triggers restricted to staff role"
     default: op
