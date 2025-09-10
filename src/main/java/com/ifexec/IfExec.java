@@ -20,18 +20,29 @@ public final class IfExec extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+
+        // Save defaults
         saveDefaultConfig();
         saveResource("messages.yml", false);
 
-        configManager = new ConfigManager(this);
-        messages = new Messages(this);
-        triggerManager = new TriggerManager(this);
-        undoManager = new UndoManager(this, triggerManager);
+        // Managers
+        this.configManager = new ConfigManager(this);
+        this.messages = new Messages(this);
+        this.triggerManager = new TriggerManager(this);
+        this.undoManager = new UndoManager(this, triggerManager);
 
-        IfCommand cmd = new IfCommand(this);
-        getCommand("if").setExecutor(cmd);
-        getCommand("if").setTabCompleter(new IfTabCompleter(this));
+        // Commands & tab completer (safe)
+        if (getCommand("if") != null) {
+            IfCommand cmd = new IfCommand(this);
+            getCommand("if").setExecutor(cmd);
+            getCommand("if").setTabCompleter(new IfTabCompleter(this));
+        } else {
+            getLogger().severe("Command 'if' missing from plugin.yml — plugin will be disabled.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
 
+        // Listener
         getServer().getPluginManager().registerEvents(new TriggerListener(this), this);
 
         getLogger().info("IfExec enabled");
