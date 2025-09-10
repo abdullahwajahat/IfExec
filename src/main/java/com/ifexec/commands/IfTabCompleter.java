@@ -220,7 +220,7 @@ public class IfCommand implements CommandExecutor {
                 t.setType(Trigger.Type.REGION);
                 t.setX1(Integer.parseInt(coordTokens.get(0)));
                 t.setY1(Integer.parseInt(coordTokens.get(1)));
-                t.setZ1(Integer.parseInt(coordTokens.get(2));
+                t.setZ1(Integer.parseInt(coordTokens.get(2)));
                 t.setX2(Integer.parseInt(coordTokens.get(3)));
                 t.setY2(Integer.parseInt(coordTokens.get(4)));
                 t.setZ2(Integer.parseInt(coordTokens.get(5)));
