@@ -5,19 +5,18 @@ import com.ifexec.manager.Messages;
 import com.ifexec.manager.TriggerManager;
 import com.ifexec.model.Trigger;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 public class TriggerListener implements Listener {
     private final IfExec plugin;
     private final TriggerManager triggerManager;
     private final Messages messages;
-    private final Map<String,Long> cooldowns = new HashMap<>();
 
     public TriggerListener(IfExec plugin) {
         this.plugin = plugin;
@@ -26,24 +25,62 @@ public class TriggerListener implements Listener {
     }
 
     @EventHandler
-    public void onMove(PlayerMoveEvent e) {
+    public void onPlayerMove(PlayerMoveEvent e) {
+        Location from = e.getFrom();
+        Location to = e.getTo();
+        if (to == null) return;
+
+        // only when block changed
+        if (from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ()) return;
+
         Player p = e.getPlayer();
-        for (Trigger t : triggerManager.getAll()) {
+
+        List<Trigger> toCheck = triggerManager.getAll().stream().toList();
+        for (Trigger t : toCheck) {
             if (!t.isEnabled()) continue;
 
-            if (t.matches(p.getLocation())) {
-                long now = System.currentTimeMillis();
-                int cd = plugin.getConfig().getInt("default-cooldown",3)*1000;
-                if (cooldowns.containsKey(p.getName()) && now - cooldowns.get(p.getName()) < cd) continue;
-                cooldowns.put(p.getName(), now);
+            boolean wasIn = (t.getType() == Trigger.Type.BLOCK) ? t.isInBlock(from) : t.isInRegion(from);
+            boolean nowIn  = (t.getType() == Trigger.Type.BLOCK) ? t.isInBlock(to)   : t.isInRegion(to);
 
-                for (String cmd : t.getCommands()) {
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.replace("@s", p.getName()));
-                    Map<String,String> ph = new HashMap<>();
-                    ph.put("command", cmd);
-                    p.sendMessage(messages.get("plugin_prefix") + " " + messages.get("command_run").replace("{command}", cmd));
+            // trigger only on entry (wasOut -> nowIn)
+            if (!nowIn || wasIn) continue;
+
+            // role check
+            if ("staff".equalsIgnoreCase(t.getRole()) && !p.hasPermission("ifexec.staff")) {
+                if (!t.isSilent()) p.sendMessage(messages.getWithPrefix("staff_only"));
+                continue;
+            }
+
+            // cooldown check (per-trigger)
+            int defaultCd = plugin.getConfigManager().getConfig().getInt("default_cooldown", 3);
+            if (!t.canTrigger(p.getUniqueId(), defaultCd)) {
+                if (!t.isSilent()) p.sendMessage(messages.getWithPrefix("cooldown_active"));
+                continue;
+            }
+
+            // execute commands
+            for (String raw : t.getCommands()) {
+                if (raw == null || raw.isBlank()) continue;
+                String cmd = raw.replace("@p", p.getName()).replace("@s", p.getName());
+                if (cmd.contains("@a")) {
+                    for (Player pl : Bukkit.getOnlinePlayers()) {
+                        String forCmd = cmd.replace("@a", pl.getName());
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), forCmd);
+                    }
+                } else {
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+                }
+                if (!t.isSilent()) {
+                    String sendMsg = null;
+                    if (p.hasPermission("ifexec.staff") && t.getMessages().containsKey("staff")) sendMsg = t.getMessages().get("staff");
+                    if (sendMsg == null && t.getMessages().containsKey("all")) sendMsg = t.getMessages().get("all");
+                    if (sendMsg == null) sendMsg = messages.get("trigger_executed");
+                    sendMsg = sendMsg.replace("{name}", t.getName()).replace("{player}", p.getName());
+                    p.sendMessage(messages.getWithPrefix("") + " " + org.bukkit.ChatColor.translateAlternateColorCodes('&', sendMsg));
                 }
             }
+
+            t.setTriggered(p.getUniqueId());
         }
     }
 }
