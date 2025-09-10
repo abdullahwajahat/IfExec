@@ -17,11 +17,9 @@ permissions:
   ifexec.use:
     description: "Allows usage of basic IfExec commands"
     default: true
-
   ifexec.admin:
-    description: "Allows full control of triggers: remove, edit, listall"
+    description: "Full control of IfExec (remove/edit)"
     default: op
-
   ifexec.staff:
-    description: "Required to run triggers restricted to staff role"
+    description: "Required for staff-only triggers"
     default: op
