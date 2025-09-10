@@ -32,20 +32,27 @@ public class IfCommand implements CommandExecutor {
         this.undoManager = plugin.getUndoManager();
     }
 
-    private void sendPref(CommandSender s, String key) {
-        s.sendMessage(messages.get(key));
+    // Helper: send message with prefix once
+    private void sendPref(CommandSender sender, String key) {
+        String prefix = messages.get("plugin_prefix");
+        String msg = messages.get(key);
+        if (!msg.startsWith(prefix)) msg = prefix + " " + msg;
+        sender.sendMessage(msg);
     }
 
-    private void sendPref(CommandSender s, String key, Map<String,String> ph) {
-        String out = messages.get(key);
-        for (Map.Entry<String,String> e : ph.entrySet()) out = out.replace("{" + e.getKey() + "}", e.getValue());
-        s.sendMessage(out);
+    // Helper: send message with placeholders and prefix once
+    private void sendPref(CommandSender sender, String key, Map<String,String> ph) {
+        String prefix = messages.get("plugin_prefix");
+        String msg = messages.get(key);
+        for (Map.Entry<String,String> e : ph.entrySet()) msg = msg.replace("{" + e.getKey() + "}", e.getValue());
+        if (!msg.startsWith(prefix)) msg = prefix + " " + msg;
+        sender.sendMessage(msg);
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(messages.get("plugin_prefix") + "§eIfExec: use /if help");
+            sendPref(sender, "usage_no_args"); // Fixed: shows only once with prefix
             return true;
         }
 
@@ -53,7 +60,7 @@ public class IfCommand implements CommandExecutor {
         try {
             switch (sub) {
                 case "help":
-                    sender.sendMessage(messages.get("plugin_prefix") + "§6IfExec commands: /if <selector> on <coords> then \"cmd\" ... [name <name>] [role staff|all], /if listall, /if list <name>, /if edit <name> ..., /if remove <name>, /if undo");
+                    sendPref(sender, "help");
                     break;
                 case "on":
                 case "isin":
@@ -78,7 +85,7 @@ public class IfCommand implements CommandExecutor {
                     plugin.getConfigManager().getConfig().options().copyDefaults(true);
                     plugin.getConfigManager().saveConfig();
                     plugin.getTriggerManager().loadAll();
-                    sender.sendMessage(messages.get("plugin_prefix") + messages.get("trigger_edited"));
+                    sendPref(sender, "trigger_edited");
                     break;
                 case "edit":
                     handleEdit(sender, args);
@@ -87,15 +94,14 @@ public class IfCommand implements CommandExecutor {
                     handleUndo(sender);
                     break;
                 default:
-                    // maybe creation with selector omitted: /if @p on ...
                     if (args.length >= 2 && (args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("isin"))) {
                         handleCreate(sender, args);
                     } else {
-                        sender.sendMessage(messages.get("plugin_prefix") + "§cUnknown subcommand. Use /if help");
+                        sendPref(sender, "unknown_subcommand");
                     }
             }
         } catch (Exception ex) {
-            sender.sendMessage(messages.get("plugin_prefix") + "§cError: " + ex.getMessage());
+            sender.sendMessage(messages.get("plugin_prefix") + " §cError: " + ex.getMessage());
             plugin.getLogger().severe("IfExec command error: " + ex);
         }
         return true;
