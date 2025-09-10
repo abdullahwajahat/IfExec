@@ -11,12 +11,17 @@ commands:
     usage: "/if <subcommand>"
     aliases: [triggerif, cond]
     permission: ifexec.use
-    permission-message: "&cYou do not have permission."
+    permission-message: "&cYou do not have permission to use IfExec commands."
 
 permissions:
   ifexec.use:
-    description: "Allows usage of IfExec commands"
+    description: "Allows usage of basic IfExec commands"
     default: true
+
   ifexec.admin:
-    description: "Full control of IfExec"
+    description: "Allows full control of triggers: remove, edit, listall"
+    default: op
+
+  ifexec.staff:
+    description: "Required to run triggers restricted to staff role"
     default: op
