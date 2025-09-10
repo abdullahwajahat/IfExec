@@ -58,6 +58,15 @@ public class TriggerManager {
         }
     }
 
+    public boolean removeTrigger(String name) {
+        if (triggers.containsKey(name)) {
+            triggers.remove(name);
+            return true;
+        }
+        return false;
+    }
+
+    
     public void saveAll() {
         YamlConfiguration cfg = plugin.getConfigManager().getConfig();
         cfg.set("triggers", null); // clear
