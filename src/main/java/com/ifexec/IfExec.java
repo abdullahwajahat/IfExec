@@ -21,7 +21,7 @@ public final class IfExec extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // Save defaults
+        // Save default resources
         saveDefaultConfig();
         saveResource("messages.yml", false);
 
@@ -31,13 +31,13 @@ public final class IfExec extends JavaPlugin {
         this.triggerManager = new TriggerManager(this);
         this.undoManager = new UndoManager(this, triggerManager);
 
-        // Commands & tab completer (safe)
+        // Command & tab
+        IfCommand cmd = new IfCommand(this);
         if (getCommand("if") != null) {
-            IfCommand cmd = new IfCommand(this);
             getCommand("if").setExecutor(cmd);
             getCommand("if").setTabCompleter(new IfTabCompleter(this));
         } else {
-            getLogger().severe("Command 'if' missing from plugin.yml — plugin will be disabled.");
+            getLogger().severe("Command 'if' missing from plugin.yml");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
