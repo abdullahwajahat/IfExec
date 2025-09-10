@@ -23,7 +23,7 @@ public class Trigger {
     private int cooldown = -1; // seconds, -1 => default
     private boolean silent = false;
     private String role = "all"; // staff or all
-    private Map<String, String> messages = new HashMap<>();
+    private Map<String,String> messages = new HashMap<>();
 
     private transient Map<java.util.UUID, Long> lastTriggered = new ConcurrentHashMap<>();
 
@@ -46,7 +46,7 @@ public class Trigger {
         return t;
     }
 
-    // getters/setters
+    // getters/setters (concise)
     public String getName() { return name; } public void setName(String name) { this.name = name; }
     public Type getType() { return type; } public void setType(Type type) { this.type = type; }
     public String getWorld() { return world; } public void setWorld(String world) { this.world = world; }
@@ -99,13 +99,12 @@ public class Trigger {
         if (this.world == null) return false;
         if (!loc.getWorld().getName().equals(this.world)) return false;
         int lx = loc.getBlockX(); int ly = loc.getBlockY(); int lz = loc.getBlockZ();
-        int minX = Math.min(x1, x2); int maxX = Math.max(x1, x2);
-        int minY = Math.min(y1, y2); int maxY = Math.max(y1, y2);
+        int minX = Math.min(x1, x2); int maxX = Math.max(x1,x2);
+        int minY = Math.min(y1, y2); int maxY = Math.max(y1,y2);
         int minZ = Math.min(z1, z2); int maxZ = Math.max(z1, z2);
         return lx >= minX && lx <= maxX && ly >= minY && ly <= maxY && lz >= minZ && lz <= maxZ;
     }
 
-    // convenience: matches location for either type
     public boolean matches(org.bukkit.Location loc) {
         return (type == Type.BLOCK) ? isInBlock(loc) : isInRegion(loc);
     }
