@@ -1,5 +1,10 @@
 plugin_prefix: "&7[&eIfExec&7] "
 
+usage_no_args: "Use /if help"
+help: "§6IfExec commands: /if <selector> on <coords> then \"cmd\" ... [name <name>] [role staff|all], /if listall, /if list <name>, /if edit <name> ..., /if remove <name>, /if undo"
+unknown_subcommand: "§cUnknown subcommand. Use /if help"
+
+
 undo_success: "&a✔ Trigger &f{name} &ahas been restored successfully!"
 undo_expired: "&e⚠ &cUndo expired — trigger cannot be restored."
 undo_empty: "&c✖ No trigger available to undo."
