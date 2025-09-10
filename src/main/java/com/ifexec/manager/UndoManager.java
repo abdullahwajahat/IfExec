@@ -28,16 +28,17 @@ public class UndoManager {
     }
 
     /** Store a trigger for undo */
-    public void push(UUID playerId, Trigger trigger) {
-        undoHistory.putIfAbsent(playerId, new ArrayDeque<>());
-        Deque<Trigger> stack = undoHistory.get(playerId);
-
+    public void push(Trigger trigger) {
+        undoHistory.putIfAbsent(null, new ArrayDeque<>());
+        Deque<Trigger> stack = undoHistory.get(null);
+    
         if (stack.size() >= undoLimit) {
-            stack.removeFirst(); // drop oldest
+            stack.removeFirst();
         }
         stack.addLast(trigger);
-        lastUndoTime.put(playerId, System.currentTimeMillis());
+        lastUndoTime.put(null, System.currentTimeMillis());
     }
+
 
     /** Handles the undo command */
     public void handleUndo(CommandSender sender) {
