@@ -1,76 +1,52 @@
 package com.ifexec.manager;
 
-import com.ifexec.IfExec;
 import com.ifexec.model.Trigger;
 import org.bukkit.command.CommandSender;
 
 import java.util.*;
 
 public class UndoManager {
-
-    private final IfExec plugin;
     private final TriggerManager triggerManager;
-
-    // Player UUID -> stack of triggers
-    private final Map<UUID, Deque<Trigger>> undoHistory;
+    private final Map<UUID, Deque<Trigger>> undoStacks = new HashMap<>();
     private final int undoLimit;
-    private final int undoTimeout;
+    private final int undoTimeout; // seconds
+    private final Map<UUID, Long> lastUndoTime = new HashMap<>();
 
-    private final Map<UUID, Long> lastUndoTime;
-
-    public UndoManager(IfExec plugin, TriggerManager triggerManager) {
-        this.plugin = plugin;
+    public UndoManager(TriggerManager triggerManager, int undoLimit, int undoTimeout) {
         this.triggerManager = triggerManager;
-        this.undoHistory = new HashMap<>();
-        this.lastUndoTime = new HashMap<>();
-        this.undoLimit = plugin.getConfig().getInt("undo_limit", 2);
-        this.undoTimeout = plugin.getConfig().getInt("undo_timeout", 30);
+        this.undoLimit = undoLimit;
+        this.undoTimeout = undoTimeout;
     }
 
-    /** Store a trigger for undo */
-    public void push(Trigger trigger) {
-        undoHistory.putIfAbsent(null, new ArrayDeque<>());
-        Deque<Trigger> stack = undoHistory.get(null);
-    
+    /** Push a trigger to player's undo stack */
+    public void push(UUID playerId, Trigger trigger) {
+        Deque<Trigger> stack = undoStacks.computeIfAbsent(playerId, k -> new ArrayDeque<>());
+
         if (stack.size() >= undoLimit) {
-            stack.removeFirst();
+            stack.removeFirst(); // keep size within limit
         }
         stack.addLast(trigger);
-        lastUndoTime.put(null, System.currentTimeMillis());
+        lastUndoTime.put(playerId, System.currentTimeMillis());
     }
 
-
-    /** Handles the undo command */
-    public void handleUndo(CommandSender sender) {
-        UUID playerId = sender instanceof org.bukkit.entity.Player
-                ? ((org.bukkit.entity.Player) sender).getUniqueId()
-                : null;
-
-        if (playerId == null) {
-            sender.sendMessage(plugin.getMessages().get("undo-player-only"));
-            return;
+    /** Undo last trigger for a player */
+    public boolean handleUndo(CommandSender sender, UUID playerId) {
+        Deque<Trigger> stack = undoStacks.get(playerId);
+        if (stack == null || stack.isEmpty()) {
+            sender.sendMessage("§cNothing to undo!");
+            return false;
         }
 
-        if (!undoHistory.containsKey(playerId) || undoHistory.get(playerId).isEmpty()) {
-            sender.sendMessage(plugin.getMessages().get("undo-none"));
-            return;
-        }
-
-        // timeout check
         long lastTime = lastUndoTime.getOrDefault(playerId, 0L);
-        if ((System.currentTimeMillis() - lastTime) / 1000 > undoTimeout) {
-            sender.sendMessage(plugin.getMessages().get("undo-timeout")
-                    .replace("%timeout%", String.valueOf(undoTimeout)));
-            return;
+        if ((System.currentTimeMillis() - lastTime) / 1000 < undoTimeout) {
+            sender.sendMessage("§cYou must wait before undoing again!");
+            return false;
         }
 
-        Trigger trigger = undoHistory.get(playerId).removeLast();
-        if (triggerManager.removeTrigger(trigger.getName())) {
-            sender.sendMessage(plugin.getMessages().get("undo-success")
-                    .replace("%trigger%", trigger.getName()));
-        } else {
-            sender.sendMessage(plugin.getMessages().get("undo-fail")
-                    .replace("%trigger%", trigger.getName()));
-        }
+        Trigger last = stack.removeLast();
+        triggerManager.removeTrigger(last.getName());
+        sender.sendMessage("§aUndid trigger: §e" + last.getName());
+        lastUndoTime.put(playerId, System.currentTimeMillis());
+        return true;
     }
 }
