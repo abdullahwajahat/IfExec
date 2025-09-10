@@ -30,20 +30,20 @@ public class TriggerListener implements Listener {
         Location to = e.getTo();
         if (to == null) return;
 
-        // only when block changed
-        if (from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ()) return;
+        if (from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ())
+            return; // only on block change
 
         Player p = e.getPlayer();
+        List<Trigger> found = triggerManager.findByLocation(to);
+        if (found.isEmpty()) return;
 
-        List<Trigger> toCheck = triggerManager.getAll().stream().toList();
-        for (Trigger t : toCheck) {
-            if (!t.isEnabled()) continue;
+        int defaultCd = plugin.getConfigManager().getConfig().getInt("default_cooldown", 3);
 
+        for (Trigger t : found) {
+            // entry detection: ensure the player was not already inside
             boolean wasIn = (t.getType() == Trigger.Type.BLOCK) ? t.isInBlock(from) : t.isInRegion(from);
             boolean nowIn  = (t.getType() == Trigger.Type.BLOCK) ? t.isInBlock(to)   : t.isInRegion(to);
-
-            // trigger only on entry (wasOut -> nowIn)
-            if (!nowIn || wasIn) continue;
+            if (!nowIn || wasIn) continue; // trigger only on entry
 
             // role check
             if ("staff".equalsIgnoreCase(t.getRole()) && !p.hasPermission("ifexec.staff")) {
@@ -51,8 +51,7 @@ public class TriggerListener implements Listener {
                 continue;
             }
 
-            // cooldown check (per-trigger)
-            int defaultCd = plugin.getConfigManager().getConfig().getInt("default_cooldown", 3);
+            // cooldown
             if (!t.canTrigger(p.getUniqueId(), defaultCd)) {
                 if (!t.isSilent()) p.sendMessage(messages.getWithPrefix("cooldown_active"));
                 continue;
