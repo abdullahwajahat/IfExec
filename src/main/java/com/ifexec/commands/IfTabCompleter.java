@@ -36,18 +36,12 @@ public class IfTabCompleter implements TabCompleter {
                 return list.stream().distinct().collect(Collectors.toList());
             }
 
-            // second token suggestions
             if (args.length == 2) {
-                String first = args[0].toLowerCase();
-                String a = args[1].toLowerCase();
-                if (first.equals("remove") || first.equals("disable") || first.equals("enable") || first.equals("list") || first.equals("edit")) {
+                String first = args[0].toLowerCase(), a = args[1].toLowerCase();
+                if (first.equals("remove") || first.equals("disable") || first.equals("enable") || first.equals("list") || first.equals("edit"))
                     return plugin.getTriggerManager().names().stream().filter(n -> n.toLowerCase().startsWith(a)).collect(Collectors.toList());
-                }
-                List<String> opts = Arrays.asList("on","isin","help","list","remove","edit","enable","disable","reload","undo");
-                return opts.stream().filter(s -> s.startsWith(a)).collect(Collectors.toList());
             }
 
-            // edit subfields
             if (args.length >= 3 && args[0].equalsIgnoreCase("edit")) {
                 if (args.length == 3) return Arrays.asList("coords","commands","role","silent","cooldown","message").stream().filter(s -> s.startsWith(args[2].toLowerCase())).collect(Collectors.toList());
                 if (args.length == 4 && args[2].equalsIgnoreCase("role")) return Arrays.asList("staff","all").stream().filter(s->s.startsWith(args[3].toLowerCase())).collect(Collectors.toList());
@@ -55,16 +49,12 @@ public class IfTabCompleter implements TabCompleter {
                 if (args.length == 4 && args[2].equalsIgnoreCase("cooldown")) return Arrays.asList("1","3","5","10","30").stream().filter(s->s.startsWith(args[3].toLowerCase())).collect(Collectors.toList());
             }
 
-            // coords suggestion for 'on' or 'isin' - provide full fill or individual parts
             for (int i = 0; i < args.length; i++) {
-                if (args[i].equalsIgnoreCase("on") && sender instanceof Player) {
-                    Player p = (Player) sender;
-                    // return full coordinate string as a single completion
+                if (args[i].equalsIgnoreCase("on") && sender instanceof Player p) {
                     String coordsFull = p.getLocation().getBlockX() + " " + p.getLocation().getBlockY() + " " + p.getLocation().getBlockZ() + " " + p.getWorld().getName();
                     return Collections.singletonList(coordsFull);
                 }
-                if (args[i].equalsIgnoreCase("isin") && sender instanceof Player) {
-                    Player p = (Player) sender;
+                if (args[i].equalsIgnoreCase("isin") && sender instanceof Player p) {
                     String coordsFull = p.getLocation().getBlockX() + " " + p.getLocation().getBlockY() + " " + p.getLocation().getBlockZ();
                     return Collections.singletonList(coordsFull);
                 }
