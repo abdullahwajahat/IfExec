@@ -1,5 +1,2 @@
-default_cooldown: 3
-undo_timeout: 30
-undo_limit: 2
-
-triggers: {}
+# Global cooldown for all triggers in seconds
+default-cooldown: 3
