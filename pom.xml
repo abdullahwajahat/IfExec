@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
 
     <name>IfExec</name>
-    <description>A better reimplementation of IfExec plugin</description>
+    <description>A cleaned, improved IfExec plugin</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
