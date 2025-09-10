@@ -1,21 +1,27 @@
-plugin_prefix: "&7[&eIfExec&7] "
+plugin_prefix: "&7[&eIfExec&7]"
 
-usage_no_args: "Use /if help"
-help: "§6IfExec commands: /if <selector> on <coords> then \"cmd\" ... [name <name>] [role staff|all], /if listall, /if list <name>, /if edit <name> ..., /if remove <name>, /if undo"
-unknown_subcommand: "§cUnknown subcommand. Use /if help"
+usage: "&cUsage: /if <help|list|listall|remove|disable|enable|reload|edit|undo|on|isin>"
+unknown_subcommand: "&cUnknown subcommand. Type /if help."
 
+help: |
+  &6/if on <x> <y> <z> then <command> [name <name>] [role <staff|all>]
+  &6/if isin <x1> <y1> <z1> <x2> <y2> <z2> then <command> [name <name>] [role <staff|all>]
+  &6/if list [name]
+  &6/if listall
+  &6/if remove <name>
+  &6/if enable <name>
+  &6/if disable <name>
+  &6/if edit <name> <field> <value>
+  &6/if undo
+  &6/if reload
 
-undo_success: "&a✔ Trigger &f{name} &ahas been restored successfully!"
-undo_expired: "&e⚠ &cUndo expired — trigger cannot be restored."
-undo_empty: "&c✖ No trigger available to undo."
+trigger_created: "&aTrigger '{name}' created."
+trigger_removed: "&cTrigger '{name}' removed."
+trigger_restored: "&aTrigger '{name}' restored."
+trigger_edited: "&aTrigger '{name}' updated."
+trigger_disabled: "&eTrigger '{name}' disabled."
+trigger_enabled: "&aTrigger '{name}' enabled."
+no_trigger: "&cNo trigger found with name '{name}'."
+no_permission: "&cYou do not have permission."
 
-no_permission: "&c✖ You don’t have permission to use this command."
-trigger_created: "&a✔ Trigger &f{name} &ahas been created."
-trigger_removed: "&c✖ Trigger &f{name} &chas been removed."
-trigger_edited: "&e✎ Trigger &f{name} &ehas been updated."
-cooldown_active: "&e⏳ Please wait before reusing this trigger!"
-staff_only: "&c✖ This trigger is for staff only."
-member_only: "&c✖ This trigger is for members only."
-commands_cleared: "&eAll commands for trigger &f{name} &ehave been cleared."
-no_trigger: "&c✖ Trigger &f{name} &cdoes not exist."
-created_usage: "&eUsage: /if <selector> on <x y z [world]> then \"cmd\" ... [name <name>] [role staff|all]"
+command_run: "&aExecuted command: &f{command}"
