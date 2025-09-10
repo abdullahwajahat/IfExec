@@ -1,6 +1,7 @@
 package com.ifexec.manager;
 
 import com.ifexec.IfExec;
+import com.ifexec.model.Trigger;
 import org.bukkit.command.CommandSender;
 
 import java.util.*;
@@ -9,7 +10,9 @@ public class UndoManager {
 
     private final IfExec plugin;
     private final TriggerManager triggerManager;
-    private final Map<UUID, Deque<String>> undoHistory; // Player UUID -> stack of trigger names
+
+    // Player UUID -> stack of triggers
+    private final Map<UUID, Deque<Trigger>> undoHistory;
     private final int undoLimit;
     private final int undoTimeout;
 
@@ -24,17 +27,19 @@ public class UndoManager {
         this.undoTimeout = plugin.getConfig().getInt("undo_timeout", 30);
     }
 
-    public void addAction(UUID playerId, String triggerName) {
+    /** Store a trigger for undo */
+    public void push(UUID playerId, Trigger trigger) {
         undoHistory.putIfAbsent(playerId, new ArrayDeque<>());
-        Deque<String> stack = undoHistory.get(playerId);
+        Deque<Trigger> stack = undoHistory.get(playerId);
 
         if (stack.size() >= undoLimit) {
-            stack.removeFirst(); // remove oldest
+            stack.removeFirst(); // drop oldest
         }
-        stack.addLast(triggerName);
+        stack.addLast(trigger);
         lastUndoTime.put(playerId, System.currentTimeMillis());
     }
 
+    /** Handles the undo command */
     public void handleUndo(CommandSender sender) {
         UUID playerId = sender instanceof org.bukkit.entity.Player
                 ? ((org.bukkit.entity.Player) sender).getUniqueId()
@@ -58,13 +63,13 @@ public class UndoManager {
             return;
         }
 
-        String triggerName = undoHistory.get(playerId).removeLast();
-        if (triggerManager.removeTrigger(triggerName)) {
+        Trigger trigger = undoHistory.get(playerId).removeLast();
+        if (triggerManager.removeTrigger(trigger.getName())) {
             sender.sendMessage(plugin.getMessages().get("undo-success")
-                    .replace("%trigger%", triggerName));
+                    .replace("%trigger%", trigger.getName()));
         } else {
             sender.sendMessage(plugin.getMessages().get("undo-fail")
-                    .replace("%trigger%", triggerName));
+                    .replace("%trigger%", trigger.getName()));
         }
     }
 }
