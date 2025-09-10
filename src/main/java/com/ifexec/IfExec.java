@@ -21,17 +21,14 @@ public final class IfExec extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // Save default resources
         saveDefaultConfig();
         saveResource("messages.yml", false);
 
-        // Managers
         this.configManager = new ConfigManager(this);
         this.messages = new Messages(this);
         this.triggerManager = new TriggerManager(this);
         this.undoManager = new UndoManager(this, triggerManager);
 
-        // Command & tab
         IfCommand cmd = new IfCommand(this);
         if (getCommand("if") != null) {
             getCommand("if").setExecutor(cmd);
@@ -42,7 +39,6 @@ public final class IfExec extends JavaPlugin {
             return;
         }
 
-        // Listener
         getServer().getPluginManager().registerEvents(new TriggerListener(this), this);
 
         getLogger().info("IfExec enabled");
