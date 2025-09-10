@@ -14,7 +14,6 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.Location;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -56,32 +55,32 @@ public class IfCommand implements CommandExecutor {
                     handleCreate(sender, args);
                     break;
                 case "list":
-                    if (args.length == 1) triggerManager.listAll(sender); else triggerManager.listOne(sender, args[1]);
+                    if (args.length == 1) listAll(sender); else listOne(sender, args[1]);
                     break;
                 case "listall":
-                    triggerManager.listAll(sender);
+                    listAll(sender);
                     break;
                 case "remove":
-                    triggerManager.handleRemove(sender, args);
+                    handleRemove(sender, args);
                     break;
                 case "disable":
-                    triggerManager.handleEnableDisable(sender, args, false);
+                    handleEnableDisable(sender, args, false);
                     break;
                 case "enable":
-                    triggerManager.handleEnableDisable(sender, args, true);
+                    handleEnableDisable(sender, args, true);
                     break;
                 case "reload":
                     plugin.getConfig().options().copyDefaults(true);
-                    plugin.saveConfig();
+                    plugin.getConfigManager().saveConfig();
                     plugin.getMessages().reload();
-                    triggerManager.loadAll();
+                    plugin.getTriggerManager().loadAll();
                     sendPref(sender, "reload_success");
                     break;
                 case "edit":
-                    triggerManager.handleEdit(sender, args);
+                    handleEdit(sender, args);
                     break;
                 case "undo":
-                    undoManager.handleUndo(sender);
+                    handleUndo(sender);
                     break;
                 default:
                     if (args.length >= 2 && (args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("isin"))) {
@@ -99,8 +98,6 @@ public class IfCommand implements CommandExecutor {
 
     // ---------- CREATE ----------
     private void handleCreate(CommandSender sender, String[] args) {
-        // Parse creation syntax:
-        // /if <selector> on <x y z [world]> then "cmd" ... [name <name>] [role staff|all] [silent true|false] [cooldown N] [message "text"]
         int idx = 0;
         String selector;
         String mode;
@@ -118,11 +115,17 @@ public class IfCommand implements CommandExecutor {
                 return;
             }
         }
-        if (!mode.equals("on") && !mode.equals("isin")) { sendPref(sender, "created_usage"); return; }
+        if (!mode.equals("on") && !mode.equals("isin")) {
+            sendPref(sender, "created_usage");
+            return;
+        }
 
         int thenIndex = -1;
         for (int i = idx+1; i < args.length; i++) if (args[i].equalsIgnoreCase("then")) { thenIndex = i; break; }
-        if (thenIndex == -1) { sender.sendMessage(messages.getWithPrefix("") + "§cMissing 'then' in command."); return; }
+        if (thenIndex == -1) {
+            sender.sendMessage(messages.getWithPrefix("") + "§cMissing 'then' in command.");
+            return;
+        }
 
         List<String> coordTokens = new ArrayList<>();
         for (int i = idx+1; i < thenIndex; i++) coordTokens.add(args[i]);
@@ -130,42 +133,24 @@ public class IfCommand implements CommandExecutor {
         List<String> tail = new ArrayList<>();
         for (int i = thenIndex+1; i < args.length; i++) tail.add(args[i]);
 
-        // options parsing
-        String name = null; String role = "all"; boolean silent = false; int cooldown = -1;
-        Map<String,String> msgs = new HashMap<>();
-        int nameIdx=-1, roleIdx=-1, silentIdx=-1, cdIdx=-1, msgIdx=-1;
+        String name = null; String role = "all";
+        int nameIdx = -1, roleIdx = -1;
         for (int i=0;i<tail.size();i++) {
-            String t = tail.get(i).toLowerCase();
-            if (t.equals("name")) nameIdx = i;
-            if (t.equals("role")) roleIdx = i;
-            if (t.equals("silent")) silentIdx = i;
-            if (t.equals("cooldown")) cdIdx = i;
-            if (t.equals("message")) msgIdx = i;
+            if (tail.get(i).equalsIgnoreCase("name")) nameIdx = i;
+            if (tail.get(i).equalsIgnoreCase("role")) roleIdx = i;
         }
         int optionStart = tail.size();
-        if (nameIdx!=-1) optionStart = Math.min(optionStart, nameIdx);
-        if (roleIdx!=-1) optionStart = Math.min(optionStart, roleIdx);
-        if (silentIdx!=-1) optionStart = Math.min(optionStart, silentIdx);
-        if (cdIdx!=-1) optionStart = Math.min(optionStart, cdIdx);
-        if (msgIdx!=-1) optionStart = Math.min(optionStart, msgIdx);
+        if (nameIdx != -1) optionStart = Math.min(optionStart, nameIdx);
+        if (roleIdx != -1) optionStart = Math.min(optionStart, roleIdx);
 
         List<String> commandTokens = new ArrayList<>();
         for (int i=0;i<optionStart;i++) commandTokens.add(tail.get(i));
 
-        if (nameIdx!=-1 && nameIdx+1<tail.size()) name = tail.get(nameIdx+1);
-        if (roleIdx!=-1 && roleIdx+1<tail.size()) role = tail.get(roleIdx+1).toLowerCase();
-        if (silentIdx!=-1 && silentIdx+1<tail.size()) silent = Boolean.parseBoolean(tail.get(silentIdx+1));
-        if (cdIdx!=-1 && cdIdx+1<tail.size()) {
-            try { cooldown = Integer.parseInt(tail.get(cdIdx+1)); } catch (NumberFormatException ignored) {}
-        }
-        if (msgIdx!=-1 && msgIdx+1<tail.size()) {
-            String m = tail.get(msgIdx+1);
-            if (m.startsWith("\"") && m.endsWith("\"") && m.length()>=2) m = m.substring(1,m.length()-1);
-            msgs.put("all", m);
-        }
+        if (nameIdx != -1 && nameIdx +1 < tail.size()) name = tail.get(nameIdx +1);
+        if (roleIdx != -1 && roleIdx +1 < tail.size()) role = tail.get(roleIdx +1).toLowerCase();
         if (!role.equals("staff") && !role.equals("all")) role = "all";
 
-        List<String> commands = commandTokens.stream().map(this::stripQuotes).filter(s->!s.isBlank()).collect(Collectors.toList());
+        List<String> commands = commandTokens.stream().map(this::stripQuotes).filter(s -> !s.isBlank()).collect(Collectors.toList());
         if (commands.isEmpty()) { sender.sendMessage(messages.getWithPrefix("") + "§cNo commands provided."); return; }
 
         Trigger t = new Trigger();
@@ -186,7 +171,7 @@ public class IfCommand implements CommandExecutor {
                 else if (sender instanceof Player) t.setWorld(((Player)sender).getWorld().getName());
                 else { sender.sendMessage(messages.getWithPrefix("") + "§cWorld required when run from console."); return; }
             } catch (NumberFormatException ex) { sender.sendMessage(messages.getWithPrefix("") + "§cInvalid coordinate."); return; }
-        } else { // region
+        } else {
             if (coordTokens.size() < 6) { sender.sendMessage(messages.getWithPrefix("") + "§cNot enough region coordinates."); return; }
             try {
                 int x1 = Integer.parseInt(coordTokens.get(0));
@@ -205,9 +190,9 @@ public class IfCommand implements CommandExecutor {
         }
 
         t.setEnabled(true);
-        t.setCooldown(cooldown);
-        t.setSilent(silent);
-        t.setMessages(msgs);
+        t.setCooldown(-1);
+        t.setSilent(false);
+        t.setMessages(new HashMap<>());
 
         triggerManager.add(t);
         Map<String,String> ph = new HashMap<>(); ph.put("name", t.getName());
@@ -221,6 +206,183 @@ public class IfCommand implements CommandExecutor {
             if (!triggerManager.exists(n)) return n;
             i++;
         }
+    }
+
+    // ---------- LIST ----------
+    private void listAll(CommandSender sender) {
+        Collection<Trigger> all = triggerManager.getAll();
+        sender.sendMessage(messages.getWithPrefix("list_header"));
+        if (all.isEmpty()) { sender.sendMessage("§7- §c(no triggers)"); return; }
+        for (Trigger t : all) {
+            TextComponent comp = new TextComponent("§7- §a[" + t.getName() + "]");
+            comp.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/if list " + t.getName()));
+            comp.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Click to run /if list " + t.getName() + "\nShift-Click to paste").create()));
+            sender.spigot().sendMessage(comp);
+        }
+    }
+
+    private void listOne(CommandSender sender, String name) {
+        Optional<Trigger> opt = triggerManager.get(name);
+        if (opt.isEmpty()) { Map<String,String> ph = new HashMap<>(); ph.put("name", name); sendPref(sender, "no_trigger", ph); return; }
+        Trigger t = opt.get();
+        sender.sendMessage("§eName: §f" + t.getName());
+        sender.sendMessage("§eWorld: §f" + t.getWorld());
+        sender.sendMessage("§eType: §f" + (t.getType() == Trigger.Type.BLOCK ? "block" : "region"));
+        if (t.getType() == Trigger.Type.BLOCK) sender.sendMessage("§eCoords: §f" + t.getX() + " " + t.getY() + " " + t.getZ());
+        else sender.sendMessage("§eCoords: §f" + t.getX1() + " " + t.getY1() + " " + t.getZ1() + "  -  " + t.getX2() + " " + t.getY2() + " " + t.getZ2());
+        sender.sendMessage("§eRole: §f" + t.getRole());
+        int cd = (t.getCooldown() >= 0) ? t.getCooldown() : plugin.getConfigManager().getConfig().getInt("default_cooldown", 3);
+        sender.sendMessage("§eCooldown: §f" + cd + "s");
+        sender.sendMessage("§eSilent: §f" + t.isSilent());
+        sender.sendMessage("§eCommands:");
+        List<String> cmds = t.getCommands();
+        for (int i=0;i<cmds.size();i++) sender.sendMessage("  " + (i+1) + ". " + cmds.get(i));
+        sender.sendMessage("§eMessages:");
+        Map<String,String> ms = t.getMessages();
+        sender.sendMessage("  all: \"" + ms.getOrDefault("all","") + "\"");
+        sender.sendMessage("  staff: \"" + ms.getOrDefault("staff","") + "\"");
+    }
+
+    // ---------- REMOVE ----------
+    private void handleRemove(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ifexec.admin")) { sendPref(sender, "no_permission"); return; }
+        if (args.length == 1) {
+            sender.sendMessage(messages.getWithPrefix("") + "§eClick a trigger below to remove it (Shift-Click to paste):");
+            for (Trigger t : triggerManager.getAll()) {
+                TextComponent comp = new TextComponent("§7- §c[" + t.getName() + "]");
+                comp.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/if remove " + t.getName()));
+                comp.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Click to remove " + t.getName() + "\nShift-Click to paste").create()));
+                sender.spigot().sendMessage(comp);
+            }
+            return;
+        }
+
+        String arg1 = args[1];
+        if (arg1.equalsIgnoreCase("confirm") && args.length >= 3) {
+            String name = args[2];
+            doRemoveConfirmed(sender, name);
+            return;
+        }
+
+        String name = arg1;
+        Optional<Trigger> opt = triggerManager.get(name);
+        if (opt.isEmpty()) { Map<String,String> ph = new HashMap<>(); ph.put("name", name); sendPref(sender, "no_trigger", ph); return; }
+
+        sender.sendMessage(messages.getWithPrefix("") + "§cAre you sure you want to remove trigger §f" + name + "§c?");
+        TextComponent confirm = new TextComponent("§7[Confirm]");
+        confirm.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/if remove confirm " + name));
+        confirm.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Click to permanently delete " + name).create()));
+        TextComponent cancel = new TextComponent("§7[Cancel]");
+        cancel.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/if remove " + name));
+        cancel.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Click to cancel").create()));
+        sender.spigot().sendMessage(confirm);
+        sender.spigot().sendMessage(cancel);
+    }
+
+    private void doRemoveConfirmed(CommandSender sender, String name) {
+        Optional<Trigger> opt = triggerManager.get(name);
+        if (opt.isEmpty()) { Map<String,String> ph = new HashMap<>(); ph.put("name", name); sendPref(sender, "no_trigger", ph); return; }
+        Trigger t = opt.get();
+        // push to undo with removing player's UUID (or null for console)
+        UUID remover = (sender instanceof Player p) ? p.getUniqueId() : null;
+        plugin.getUndoManager().push(remover, t);
+        triggerManager.remove(name);
+        Map<String,String> ph = new HashMap<>(); ph.put("name", name);
+        sendPref(sender, "trigger_removed", ph);
+        sender.sendMessage(messages.getWithPrefix("") + "§7Type /if undo to restore. (expires in " + plugin.getConfigManager().getConfig().getInt("undo_timeout", 30) + "s)");
+    }
+
+    // ---------- ENABLE/DISABLE ----------
+    private void handleEnableDisable(CommandSender sender, String[] args, boolean enable) {
+        if (!sender.hasPermission("ifexec.admin")) { sendPref(sender, "no_permission"); return; }
+        if (args.length < 2) { sender.sendMessage(messages.getWithPrefix("") + "§eUsage: /if " + (enable ? "enable <name>" : "disable <name>")); return; }
+        String name = args[1];
+        Optional<Trigger> opt = triggerManager.get(name);
+        if (opt.isEmpty()) { Map<String,String> ph = new HashMap<>(); ph.put("name", name); sendPref(sender, "no_trigger", ph); return; }
+        Trigger t = opt.get();
+        t.setEnabled(enable);
+        triggerManager.add(t);
+        Map<String,String> ph = new HashMap<>(); ph.put("name", name); sendPref(sender, "trigger_edited", ph);
+    }
+
+    // ---------- EDIT ----------
+    private void handleEdit(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ifexec.admin")) { sendPref(sender, "no_permission"); return; }
+        if (args.length < 3) { sender.sendMessage(messages.getWithPrefix("") + "§eUsage: /if edit <name> <field> <value>"); return; }
+        String name = args[1];
+        String field = args[2].toLowerCase();
+        Optional<Trigger> opt = triggerManager.get(name);
+        if (opt.isEmpty()) { Map<String,String> ph = new HashMap<>(); ph.put("name", name); sendPref(sender, "no_trigger", ph); return; }
+        Trigger t = opt.get();
+
+        try {
+            switch (field) {
+                case "coords":
+                    if (t.getType() == Trigger.Type.BLOCK) {
+                        if (args.length < 6) { sender.sendMessage(messages.getWithPrefix("") + "§cUsage: /if edit <name> coords <x> <y> <z> [world]"); return; }
+                        t.setX(Integer.parseInt(args[3])); t.setY(Integer.parseInt(args[4])); t.setZ(Integer.parseInt(args[5]));
+                        if (args.length >= 7) t.setWorld(args[6]);
+                    } else {
+                        if (args.length < 9) { sender.sendMessage(messages.getWithPrefix("") + "§cUsage: /if edit <name> coords <x1> <y1> <z1> <x2> <y2> <z2> [world]"); return; }
+                        t.setX1(Integer.parseInt(args[3])); t.setY1(Integer.parseInt(args[4])); t.setZ1(Integer.parseInt(args[5]));
+                        t.setX2(Integer.parseInt(args[6])); t.setY2(Integer.parseInt(args[7])); t.setZ2(Integer.parseInt(args[8]));
+                        if (args.length >= 10) t.setWorld(args[9]);
+                    }
+                    break;
+                case "role":
+                    if (args.length < 4) { sender.sendMessage(messages.getWithPrefix("") + "§cUsage: /if edit <name> role <staff|all>"); return; }
+                    String r = args[3].toLowerCase();
+                    if (!r.equals("staff") && !r.equals("all")) r = "all";
+                    t.setRole(r);
+                    break;
+                case "command":
+                case "commands":
+                    if (args.length < 4) { sender.sendMessage(messages.getWithPrefix("") + "§cUsage: /if edit <name> command <cmd1>; <cmd2>; ..."); return; }
+                    String joined = String.join(" ", Arrays.copyOfRange(args,3,args.length));
+                    List<String> cmds = Arrays.stream(joined.split(";")).map(this::stripQuotes).filter(s -> !s.isBlank()).collect(Collectors.toList());
+                    if (cmds.isEmpty()) { sender.sendMessage(messages.getWithPrefix("") + "§cNo commands provided."); return; }
+                    t.setCommands(cmds);
+                    break;
+                case "cooldown":
+                    if (args.length < 4) { sender.sendMessage(messages.getWithPrefix("") + "§cUsage: /if edit <name> cooldown <seconds>"); return; }
+                    t.setCooldown(Integer.parseInt(args[3]));
+                    break;
+                case "silent":
+                    if (args.length < 4) { sender.sendMessage(messages.getWithPrefix("") + "§cUsage: /if edit <name> silent <true|false>"); return; }
+                    t.setSilent(Boolean.parseBoolean(args[3]));
+                    break;
+                case "message":
+                    if (args.length < 5) { sender.sendMessage(messages.getWithPrefix("") + "§cUsage: /if edit <name> message <all|staff> \"<text>\""); return; }
+                    String target = args[3].toLowerCase();
+                    String msg = String.join(" ", Arrays.copyOfRange(args, 4, args.length));
+                    if (msg.startsWith("\"") && msg.endsWith("\"") && msg.length() >= 2) msg = msg.substring(1, msg.length()-1);
+                    Map<String,String> mm = t.getMessages(); mm.put(target, msg); t.setMessages(mm);
+                    break;
+                default:
+                    sender.sendMessage(messages.getWithPrefix("") + "§cUnknown field: " + field);
+                    return;
+            }
+        } catch (NumberFormatException ex) {
+            sender.sendMessage(messages.getWithPrefix("") + "§cInvalid number.");
+            return;
+        }
+
+        triggerManager.add(t);
+        Map<String,String> ph = new HashMap<>(); ph.put("name", name); sendPref(sender, "trigger_edited", ph);
+    }
+
+    // ---------- UNDO ----------
+    private void handleUndo(CommandSender sender) {
+        if (!undoManager.hasUndo(sender)) {
+            sender.sendMessage(messages.getWithPrefix("undo_empty"));
+            return;
+        }
+        Optional<Trigger> tOpt = undoManager.pop(sender);
+        if (tOpt.isEmpty()) { sender.sendMessage(messages.getWithPrefix("undo_expired")); return; }
+        Trigger t = tOpt.get();
+        triggerManager.add(t);
+        Map<String,String> ph = new HashMap<>(); ph.put("name", t.getName());
+        sendPref(sender, "undo_success", ph);
     }
 
     private String stripQuotes(String s) {
