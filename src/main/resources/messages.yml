@@ -1,27 +1,29 @@
-plugin_prefix: "&7[&eIfExec&7]"
+plugin_prefix: "&7[&eIfExec&7] "
 
-usage: "&cUsage: /if <help|list|listall|remove|disable|enable|reload|edit|undo|on|isin>"
-unknown_subcommand: "&cUnknown subcommand. Type /if help."
-
+usage: "&cUsage: /if <help|list|listall|remove|disable|enable|edit|undo|reload|on|isin>"
+unknown_subcommand: "&cUnknown subcommand. Use /if help."
 help: |
-  &6/if on <x> <y> <z> then <command> [name <name>] [role <staff|all>]
-  &6/if isin <x1> <y1> <z1> <x2> <y2> <z2> then <command> [name <name>] [role <staff|all>]
-  &6/if list [name]
-  &6/if listall
-  &6/if remove <name>
-  &6/if enable <name>
-  &6/if disable <name>
-  &6/if edit <name> <field> <value>
-  &6/if undo
-  &6/if reload
+  &6IfExec commands:
+  &e/if on <x> <y> <z> then "<cmd>" ... [name <name>] [role staff|all] [silent true|false] [cooldown N] [message "<msg>"]
+  &e/if isin <x1> <y1> <z1> <x2> <y2> <z2> then "<cmd>" ...
+  &e/if listall | /if list <name> | /if remove <name> | /if edit <name> <field> <value> | /if undo | /if reload
 
-trigger_created: "&aTrigger '{name}' created."
-trigger_removed: "&cTrigger '{name}' removed."
-trigger_restored: "&aTrigger '{name}' restored."
-trigger_edited: "&aTrigger '{name}' updated."
-trigger_disabled: "&eTrigger '{name}' disabled."
-trigger_enabled: "&aTrigger '{name}' enabled."
-no_trigger: "&cNo trigger found with name '{name}'."
-no_permission: "&cYou do not have permission."
+trigger_created: "&a✔ Trigger &f{name} &ahas been created."
+trigger_removed: "&c✖ Trigger &f{name} &chas been removed."
+trigger_edited: "&e✎ Trigger &f{name} &ehas been updated."
+trigger_restored: "&a✔ Trigger &f{name} &ahas been restored successfully!"
+undo_success: "&a✔ Trigger &f{name} &ahas been restored successfully!"
+undo_empty: "&c✖ No trigger available to undo."
+undo_expired: "&e⚠ &cUndo expired — trigger cannot be restored."
 
-command_run: "&aExecuted command: &f{command}"
+no_permission: "&c✖ You don’t have permission to use this command."
+staff_only: "&c✖ This trigger is for staff only."
+member_only: "&c✖ This trigger is for members only."
+cooldown_active: "&e⏳ Please wait before reusing this trigger!"
+commands_cleared: "&eAll commands for trigger &f{name} &ehave been cleared."
+no_trigger: "&c✖ Trigger &f{name} &cdoes not exist."
+created_usage: "&eUsage: /if <selector> on <x y z [world]> then \"cmd\" ... [name <name>] [role staff|all]"
+trigger_executed: "&a✔ Trigger &f{name} &aexecuted for &f{player}&a."
+command_run: "&aExecuted: &f{command}"
+reload_success: "&a✔ Configuration reloaded."
+config_updated: "&a✔ Config updated: {key} = {value}"
