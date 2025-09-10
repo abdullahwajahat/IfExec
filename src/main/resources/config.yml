@@ -1,2 +1,9 @@
-# Global cooldown for all triggers in seconds
-default-cooldown: 3
+# default cooldown in seconds for triggers when trigger.cooldown == -1
+default_cooldown: 3
+
+# undo settings
+undo_timeout: 30
+undo_limit: 3
+
+# triggers stored here
+triggers: {}
