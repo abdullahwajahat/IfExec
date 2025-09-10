@@ -1,43 +1,24 @@
 package com.ifexec.manager;
 
-import com.ifexec.IfExec;
 import com.ifexec.model.Trigger;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.command.CommandSender;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Optional;
+import java.util.Stack;
 
 public class UndoManager {
-    private final IfExec plugin;
-    private final TriggerManager triggerManager;
-    private final Deque<Trigger> stack = new ArrayDeque<>();
+    private final Stack<Trigger> stack = new Stack<>();
 
-    public UndoManager(IfExec plugin, TriggerManager triggerManager) {
-        this.plugin = plugin;
-        this.triggerManager = triggerManager;
-    }
+    public UndoManager(com.ifexec.IfExec plugin, TriggerManager triggerManager) {}
 
-    public void push(Trigger t) {
-        if (t == null) return;
-        int limit = plugin.getConfigManager().getConfig().getInt("undo_limit", 2);
-        stack.push(t.cloneTrigger());
-        while (stack.size() > limit) stack.removeLast();
-        scheduleExpiry();
-    }
+    public void push(Trigger t) { stack.push(t); }
 
-    private void scheduleExpiry() {
-        int timeout = plugin.getConfigManager().getConfig().getInt("undo_timeout", 30);
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (!stack.isEmpty()) stack.removeLast();
-            }
-        }.runTaskLater(plugin, timeout * 20L);
-    }
-
-    public Optional<Trigger> pop() {
-        if (stack.isEmpty()) return Optional.empty();
-        return Optional.of(stack.pop());
+    public void handleUndo(CommandSender sender) {
+        if (stack.isEmpty()) {
+            sender.sendMessage("§cNothing to undo.");
+            return;
+        }
+        Trigger t = stack.pop();
+        sender.sendMessage("§aRestored trigger: " + t.getName());
     }
 }
