@@ -20,10 +20,15 @@ public class Messages {
     }
 
     public String get(String path) {
+        String msg = messagesConfig.getString(path, "");
+        if (msg == null) msg = "";
+        return ChatColor.translateAlternateColorCodes('&', msg);
+    }
+    
+    public String getWithPrefix(String path) {
         String prefix = messagesConfig.getString("plugin_prefix", "");
         String msg = messagesConfig.getString(path, "");
         if (msg == null) msg = "";
-        String full = (prefix == null ? "" : prefix) + msg;
-        return ChatColor.translateAlternateColorCodes('&', full);
+        return ChatColor.translateAlternateColorCodes('&', prefix + msg);
     }
 }
