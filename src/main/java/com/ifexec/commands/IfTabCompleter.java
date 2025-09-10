@@ -2,81 +2,113 @@ package com.ifexec.commands;
 
 import com.ifexec.IfExec;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.PluginDescriptionFile;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class IfTabCompleter implements TabCompleter {
+
     private final IfExec plugin;
 
-    public IfTabCompleter(IfExec plugin) { this.plugin = plugin; }
+    public IfTabCompleter(IfExec plugin) {
+        this.plugin = plugin;
+    }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        List<String> res = new ArrayList<>();
         try {
+            if (args.length == 0) return Collections.emptyList();
+
+            String sub = args[0].toLowerCase();
+            List<String> completions = new ArrayList<>();
+
+            // ---------- Subcommand suggestions ----------
             if (args.length == 1) {
-                List<String> subs = Arrays.asList("help","list","listall","remove","disable","enable","reload","edit","undo","on","isin");
-                for (String s : subs) if (s.startsWith(args[0].toLowerCase())) res.add(s);
-                for (String n : plugin.getTriggerManager().names()) if (n.startsWith(args[0])) res.add(n);
-                return res.stream().distinct().collect(Collectors.toList());
+                List<String> subs = Arrays.asList(
+                        "help", "list", "listall", "remove", "disable", "enable", "reload", "edit", "undo", "on", "isin"
+                );
+                completions.addAll(subs.stream().filter(s -> s.startsWith(sub)).collect(Collectors.toList()));
+
+                // Also suggest existing trigger names
+                completions.addAll(plugin.getTriggerManager().names().stream()
+                        .filter(name -> name.startsWith(sub)).collect(Collectors.toList()));
+
+                return completions.stream().distinct().sorted().collect(Collectors.toList());
             }
 
+            // ---------- Second argument ----------
             if (args.length == 2) {
-                String first = args[0].toLowerCase();
-                if (first.equals("remove") || first.equals("disable") || first.equals("enable") || first.equals("list") || first.equals("edit")) {
-                    for (String n : plugin.getTriggerManager().names()) if (n.startsWith(args[1])) res.add(n);
-                    return res;
+                if (Arrays.asList("remove", "disable", "enable", "list", "edit").contains(sub)) {
+                    completions.addAll(plugin.getTriggerManager().names().stream()
+                            .filter(name -> name.startsWith(args[1])).collect(Collectors.toList()));
+                    return completions;
+                }
+
+                // If using /if on or /if isin, suggest coordinates for player
+                if (Arrays.asList("on", "isin").contains(sub) && sender instanceof Player) {
+                    Player p = (Player) sender;
+                    completions.addAll(Arrays.asList(
+                            String.valueOf(p.getLocation().getBlockX()),
+                            String.valueOf(p.getLocation().getBlockY()),
+                            String.valueOf(p.getLocation().getBlockZ()),
+                            sub.equals("on") ? p.getWorld().getName() : ""
+                    ));
+                    return completions;
                 }
             }
 
-            if (args.length >= 3 && args[0].equalsIgnoreCase("edit") && args[2].equalsIgnoreCase("role")) {
-                return Arrays.asList("staff","all");
+            // ---------- Role / Silent / Cooldown ----------
+            if (args.length >= 3 && sub.equalsIgnoreCase("edit")) {
+                String field = args[2].toLowerCase();
+                switch (field) {
+                    case "role":
+                        return Arrays.asList("staff", "all");
+                    case "silent":
+                        return Arrays.asList("true", "false");
+                    case "cooldown":
+                        return Arrays.asList("1", "3", "5", "10", "30");
+                }
             }
 
-            if (args.length >= 3 && args[0].equalsIgnoreCase("edit") && args[2].equalsIgnoreCase("silent")) {
-                return Arrays.asList("true","false");
-            }
-
-            if (args.length >= 3 && args[0].equalsIgnoreCase("edit") && args[2].equalsIgnoreCase("cooldown")) {
-                return Arrays.asList("1","3","5","10","30");
-            }
-
-            // coords suggestion for player when using 'on'
-            if ((args[0].equalsIgnoreCase("on") || (args.length >= 2 && args[1].equalsIgnoreCase("on"))) && sender instanceof Player) {
+            // ---------- Coordinate suggestions ----------
+            if ((sub.equalsIgnoreCase("on") || sub.equalsIgnoreCase("isin")) && sender instanceof Player) {
                 Player p = (Player) sender;
-                int x = p.getLocation().getBlockX(), y = p.getLocation().getBlockY(), z = p.getLocation().getBlockZ();
-                return Arrays.asList(String.valueOf(x), String.valueOf(y), String.valueOf(z), p.getWorld().getName());
+                // Automatically fill all coordinates at once if player is creating a trigger
+                if (args.length >= 2 && args.length <= (sub.equals("on") ? 4 : 6)) {
+                    List<String> coords = new ArrayList<>();
+                    coords.add(String.valueOf(p.getLocation().getBlockX()));
+                    coords.add(String.valueOf(p.getLocation().getBlockY()));
+                    coords.add(String.valueOf(p.getLocation().getBlockZ()));
+                    if (sub.equals("on")) coords.add(p.getWorld().getName());
+                    return coords;
+                }
             }
 
-            // coords suggestion for player when using 'isin'
-            if ((args[0].equalsIgnoreCase("isin") || (args.length >= 2 && args[1].equalsIgnoreCase("isin"))) && sender instanceof Player) {
-                Player p = (Player) sender;
-                int x = p.getLocation().getBlockX(), y = p.getLocation().getBlockY(), z = p.getLocation().getBlockZ();
-                return Arrays.asList(String.valueOf(x), String.valueOf(y), String.valueOf(z));
-            }
-
-            // server commands for 'then' / command suggestions
+            // ---------- Suggest server commands after "then" ----------
             for (int i = 0; i < args.length; i++) {
-                if (args[i].equalsIgnoreCase("then") || args[0].equalsIgnoreCase("commands") || (args.length >= 2 && args[1].equalsIgnoreCase("then"))) {
+                if (args[i].equalsIgnoreCase("then") || args[0].equalsIgnoreCase("commands") || 
+                    (args.length >= 2 && args[1].equalsIgnoreCase("then"))) {
                     Set<String> cmdSet = new HashSet<>();
                     for (org.bukkit.plugin.Plugin pl : Bukkit.getPluginManager().getPlugins()) {
-                        PluginDescriptionFile pdf = pl.getDescription();
-                        if (pdf.getCommands() != null) cmdSet.addAll(pdf.getCommands().keySet());
+                        if (pl.getDescription().getCommands() != null) {
+                            cmdSet.addAll(pl.getDescription().getCommands().keySet());
+                        }
                     }
-                    List<String> cmds = cmdSet.stream().filter(s -> !s.toLowerCase().contains("worldedit")).sorted().collect(Collectors.toList());
-                    return cmds;
+                    return cmdSet.stream()
+                            .filter(cmd -> !cmd.toLowerCase().contains("worldedit"))
+                            .sorted().collect(Collectors.toList());
                 }
             }
 
         } catch (Exception ex) {
             plugin.getLogger().warning("TabComplete error: " + ex.getMessage());
         }
-        return res;
+
+        return Collections.emptyList();
     }
 }
