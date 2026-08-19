@@ -1,12 +1,13 @@
 plugin_prefix: "&7[&eIfExec&7]"
 
 # Generic /help / usage
-usage: "&cUsage: /if <help|list|listall|remove|disable|enable|edit|undo|reload|on|isin>"
+usage: "&cUsage: /if <selector> <on|isin> [coords] <name> <\"command\">"
 unknown_subcommand: "&cUnknown subcommand. Use /if help."
 help: |
   &6IfExec commands:
-  &e/if on <x> <y> <z> then "<cmd>" ... [name <name>] [role staff|all] [silent true|false] [cooldown N] [message "<msg>"]
-  &e/if isin <x1> <y1> <z1> <x2> <y2> <z2> then "<cmd>" ...
+  &e/if <selector> on <x> <y> <z> <name> "<cmd>"
+  &e/if <selector> isin <x1> <y1> <z1> <x2> <y2> <z2> <name> "<cmd>"
+  &e/if <selector> isin <name> "<cmd>" (Uses WorldEdit selection)
   &e/if list [name] | /if listall
   &e/if remove <name>
   &e/if edit <name> <field> <value>
@@ -32,7 +33,7 @@ cooldown_active: "&e⏳ Please wait before reusing this trigger!"
 commands_cleared: "&eAll commands for trigger &f{name} &ehave been cleared."
 no_trigger: "&c✖ Trigger &f{name} &cdoes not exist."
 invalid_coordinates: "&c✖ Invalid coordinates."
-created_usage: "&eUsage: /if <selector> on <x y z [world]> then \"cmd\" ... [name <name>] [role staff|all]"
+created_usage: "&eUsage: /if <selector> on <x> <y> <z> <name> \"<cmd>\" OR /if <selector> isin [coords] <name> \"<cmd>\""
 
 # Execution messages
 trigger_executed: "&a✔ Trigger &f{name} &aexecuted for &f{player}&a."
