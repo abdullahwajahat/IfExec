@@ -26,12 +26,13 @@ public final class IfExec extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // Filter out console logs when trigger commands are being dispatched
+        // Aggressively filter out ALL console logs while trigger commands are being dispatched
         try {
             Logger rootLogger = Logger.getLogger("");
             Filter previousFilter = rootLogger.getFilter();
             rootLogger.setFilter(record -> {
-                if (isDispatching && record.getMessage() != null && record.getMessage().toLowerCase().contains("issued server command")) {
+                // If the plugin is currently running a command, block the log from printing
+                if (isDispatching) {
                     return false;
                 }
                 return previousFilter == null || previousFilter.isLoggable(record);
