@@ -23,6 +23,7 @@ public class Messages {
     }
 
     public String get(String path) {
+        if (path == null || path.isEmpty()) return "";
         String msg = messagesConfig.getString(path, "");
         if (msg == null) msg = "";
         return ChatColor.translateAlternateColorCodes('&', msg);
@@ -30,9 +31,13 @@ public class Messages {
 
     public String getWithPrefix(String path) {
         String prefix = messagesConfig.getString("plugin_prefix", "");
+        if (prefix == null) prefix = "";
+        if (path == null || path.isEmpty()) {
+            return ChatColor.translateAlternateColorCodes('&', prefix).trim();
+        }
         String msg = messagesConfig.getString(path, "");
         if (msg == null) msg = "";
-        String full = (prefix == null ? "" : prefix) + (prefix.endsWith(" ") ? "" : " ") + msg;
+        String full = prefix + (prefix.isEmpty() || msg.isEmpty() || prefix.endsWith(" ") ? "" : " ") + msg;
         return ChatColor.translateAlternateColorCodes('&', full.trim());
     }
 }
