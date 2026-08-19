@@ -4,11 +4,12 @@ main: com.ifexec.IfExec
 api-version: 1.21
 description: "Run commands when players enter coordinates or regions."
 authors: ["IfExecAuthor"]
+softdepend: [WorldEdit]
 
 commands:
   if:
     description: "Create and manage conditional triggers"
-    usage: "/if <subcommand>"
+    usage: "/if <selector> <on|isin> [coords] <name> <\"command\">"
     aliases: [triggerif, cond]
     permission: ifexec.use
     permission-message: "&cYou do not have permission to use IfExec commands."
