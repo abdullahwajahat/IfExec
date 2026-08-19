@@ -6,6 +6,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.World;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -43,10 +44,11 @@ public class IfTabCompleter implements TabCompleter {
             }
 
             if (args.length >= 3 && args[0].equalsIgnoreCase("edit")) {
-                if (args.length == 3) return Arrays.asList("coords", "command", "role", "silent", "cooldown", "message").stream().filter(s -> s.startsWith(args[2].toLowerCase())).collect(Collectors.toList());
+                if (args.length == 3) return Arrays.asList("coords", "command", "role", "silent", "cooldown", "message", "world").stream().filter(s -> s.startsWith(args[2].toLowerCase())).collect(Collectors.toList());
                 if (args.length == 4 && args[2].equalsIgnoreCase("role")) return Arrays.asList("staff", "all").stream().filter(s -> s.startsWith(args[3].toLowerCase())).collect(Collectors.toList());
                 if (args.length == 4 && args[2].equalsIgnoreCase("silent")) return Arrays.asList("true", "false").stream().filter(s -> s.startsWith(args[3].toLowerCase())).collect(Collectors.toList());
                 if (args.length == 4 && args[2].equalsIgnoreCase("cooldown")) return Arrays.asList("1", "3", "5", "10", "30").stream().filter(s -> s.startsWith(args[3].toLowerCase())).collect(Collectors.toList());
+                if (args.length == 4 && args[2].equalsIgnoreCase("world")) return Bukkit.getWorlds().stream().map(World::getName).filter(s -> s.toLowerCase().startsWith(args[3].toLowerCase())).collect(Collectors.toList());
             }
 
             // Coordinates autocompletion for player location
