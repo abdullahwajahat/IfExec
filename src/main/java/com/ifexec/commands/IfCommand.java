@@ -5,15 +5,19 @@ import com.ifexec.manager.Messages;
 import com.ifexec.manager.TriggerManager;
 import com.ifexec.manager.UndoManager;
 import com.ifexec.model.Trigger;
+import com.sk89q.worldedit.bukkit.WorldEditPlugin;
+import com.sk89q.worldedit.regions.Region;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -39,7 +43,7 @@ public class IfCommand implements CommandExecutor {
     private void sendPref(CommandSender s, String key, Map<String,String> ph) {
         String msg = messages.get(key);
         for (Map.Entry<String,String> e : ph.entrySet()) msg = msg.replace("{" + e.getKey() + "}", e.getValue());
-        s.sendMessage(messages.getWithPrefix("") + " " + org.bukkit.ChatColor.translateAlternateColorCodes('&', msg));
+        s.sendMessage(messages.getWithPrefix("") + " " + ChatColor.translateAlternateColorCodes('&', msg));
     }
 
     @Override
@@ -50,10 +54,6 @@ public class IfCommand implements CommandExecutor {
         try {
             switch (sub) {
                 case "help": sendPref(sender, "help"); break;
-                case "on":
-                case "isin":
-                    handleCreate(sender, args);
-                    break;
                 case "list":
                     if (args.length == 1) listAll(sender); else listOne(sender, args[1]);
                     break;
@@ -83,11 +83,9 @@ public class IfCommand implements CommandExecutor {
                     handleUndo(sender);
                     break;
                 default:
-                    if (args.length >= 2 && (args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("isin"))) {
-                        handleCreate(sender, args);
-                    } else {
-                        sendPref(sender, "unknown_subcommand");
-                    }
+                    // Matches /if <selector> <on|isin> ... or /if <on|isin> ...
+                    handleCreate(sender, args);
+                    break;
             }
         } catch (Exception ex) {
             sender.sendMessage(messages.getWithPrefix("") + " §cError: " + ex.getMessage());
@@ -98,95 +96,132 @@ public class IfCommand implements CommandExecutor {
 
     // ---------- CREATE ----------
     private void handleCreate(CommandSender sender, String[] args) {
-        int idx = 0;
-        String selector;
+        int modeIndex = 1;
         String mode;
-        if (args.length >= 2 && (args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("isin"))) {
-            selector = (sender instanceof Player) ? "@s" : "@p";
+
+        if (args[0].equalsIgnoreCase("on") || args[0].equalsIgnoreCase("isin")) {
+            mode = args[0].toLowerCase();
+            modeIndex = 0;
+        } else if (args.length >= 2 && (args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("isin"))) {
             mode = args[1].toLowerCase();
-            idx = 1;
+            modeIndex = 1;
         } else {
-            selector = args[0];
-            if (args.length >= 2) {
-                mode = args[1].toLowerCase();
-                idx = 1;
-            } else {
+            sendPref(sender, "unknown_subcommand");
+            return;
+        }
+
+        Trigger t = new Trigger();
+        t.setRole("all");
+        int nameIdx = -1;
+        List<String> coordTokens = new ArrayList<>();
+
+        if (mode.equals("on")) {
+            // /if <selector> on <x> <y> <z> <name> <cmd>
+            int requiredArgs = (modeIndex == 0) ? 5 : 6;
+            if (args.length < requiredArgs) {
+                sender.sendMessage(messages.getWithPrefix("") + " §cUsage: /if <selector> on <x> <y> <z> <name> \"<command>\"");
+                return;
+            }
+            coordTokens.add(args[modeIndex + 1]);
+            coordTokens.add(args[modeIndex + 2]);
+            coordTokens.add(args[modeIndex + 3]);
+            nameIdx = modeIndex + 4;
+        } else {
+            // mode is "isin"
+            int checkIdx = modeIndex + 1;
+            if (args.length <= checkIdx) {
                 sendPref(sender, "created_usage");
                 return;
             }
+
+            // Check if coordinates were manually supplied or if WorldEdit is being used
+            if (args[checkIdx].matches("-?\\d+")) {
+                int requiredArgs = (modeIndex == 0) ? 8 : 9;
+                if (args.length < requiredArgs) {
+                    sender.sendMessage(messages.getWithPrefix("") + " §cUsage: /if <selector> isin <x1> <y1> <z1> <x2> <y2> <z2> <name> \"<command>\"");
+                    return;
+                }
+                for (int i = 1; i <= 6; i++) {
+                    coordTokens.add(args[modeIndex + i]);
+                }
+                nameIdx = modeIndex + 7;
+            } else {
+                // WorldEdit selection hook
+                if (!(sender instanceof Player p)) {
+                    sender.sendMessage(messages.getWithPrefix("") + " §cConsole must provide manual coordinates.");
+                    return;
+                }
+
+                Plugin wePlugin = Bukkit.getPluginManager().getPlugin("WorldEdit");
+                if (wePlugin == null || !(wePlugin instanceof WorldEditPlugin we)) {
+                    sender.sendMessage(messages.getWithPrefix("") + " §cWorldEdit is not installed! Please provide coordinates manually.");
+                    return;
+                }
+
+                try {
+                    Region sel = we.getSession(p).getSelection(we.getSession(p).getSelectionWorld());
+                    if (sel == null) throw new NullPointerException();
+                    t.setType(Trigger.Type.REGION);
+                    t.setX1(sel.getMinimumPoint().getBlockX());
+                    t.setY1(sel.getMinimumPoint().getBlockY());
+                    t.setZ1(sel.getMinimumPoint().getBlockZ());
+                    t.setX2(sel.getMaximumPoint().getBlockX());
+                    t.setY2(sel.getMaximumPoint().getBlockY());
+                    t.setZ2(sel.getMaximumPoint().getBlockZ());
+                    t.setWorld(p.getWorld().getName());
+                } catch (Exception e) {
+                    sender.sendMessage(messages.getWithPrefix("") + " §cPlease make a WorldEdit selection first, or specify coordinates manually.");
+                    return;
+                }
+                nameIdx = modeIndex + 1;
+            }
         }
-        if (!mode.equals("on") && !mode.equals("isin")) {
-            sendPref(sender, "created_usage");
+
+        if (nameIdx >= args.length) {
+            sender.sendMessage(messages.getWithPrefix("") + " §cPlease provide a trigger name and command.");
             return;
         }
 
-        int thenIndex = -1;
-        for (int i = idx+1; i < args.length; i++) if (args[i].equalsIgnoreCase("then")) { thenIndex = i; break; }
-        if (thenIndex == -1) {
-            sender.sendMessage(messages.getWithPrefix("") + "§cMissing 'then' in command.");
-            return;
-        }
-
-        List<String> coordTokens = new ArrayList<>();
-        for (int i = idx+1; i < thenIndex; i++) coordTokens.add(args[i]);
-
-        List<String> tail = new ArrayList<>();
-        for (int i = thenIndex+1; i < args.length; i++) tail.add(args[i]);
-
-        String name = null; String role = "all";
-        int nameIdx = -1, roleIdx = -1;
-        for (int i=0;i<tail.size();i++) {
-            if (tail.get(i).equalsIgnoreCase("name")) nameIdx = i;
-            if (tail.get(i).equalsIgnoreCase("role")) roleIdx = i;
-        }
-        int optionStart = tail.size();
-        if (nameIdx != -1) optionStart = Math.min(optionStart, nameIdx);
-        if (roleIdx != -1) optionStart = Math.min(optionStart, roleIdx);
-
-        List<String> commandTokens = new ArrayList<>();
-        for (int i=0;i<optionStart;i++) commandTokens.add(tail.get(i));
-
-        if (nameIdx != -1 && nameIdx +1 < tail.size()) name = tail.get(nameIdx +1);
-        if (roleIdx != -1 && roleIdx +1 < tail.size()) role = tail.get(roleIdx +1).toLowerCase();
-        if (!role.equals("staff") && !role.equals("all")) role = "all";
-
-        List<String> commands = commandTokens.stream().map(this::stripQuotes).filter(s -> !s.isBlank()).collect(Collectors.toList());
-        if (commands.isEmpty()) { sender.sendMessage(messages.getWithPrefix("") + "§cNo commands provided."); return; }
-
-        Trigger t = new Trigger();
-        if (name == null || name.isBlank()) name = generateName();
+        String name = args[nameIdx];
         t.setName(name);
-        t.setRole(role);
-        t.setCommands(commands);
 
-        if (mode.equals("on")) {
-            if (coordTokens.size() < 3) { sender.sendMessage(messages.getWithPrefix("") + "§cNot enough coordinates."); return; }
+        StringBuilder cmdBuilder = new StringBuilder();
+        for (int i = nameIdx + 1; i < args.length; i++) {
+            cmdBuilder.append(args[i]).append(" ");
+        }
+
+        String rawCmd = cmdBuilder.toString().trim();
+        if (rawCmd.isEmpty()) {
+            sender.sendMessage(messages.getWithPrefix("") + " §cNo command provided.");
+            return;
+        }
+        t.setCommands(Collections.singletonList(stripQuotes(rawCmd)));
+
+        // Parse manual coordinates if present
+        if (!coordTokens.isEmpty()) {
             try {
-                int x = Integer.parseInt(coordTokens.get(0));
-                int y = Integer.parseInt(coordTokens.get(1));
-                int z = Integer.parseInt(coordTokens.get(2));
-                t.setType(Trigger.Type.BLOCK);
-                t.setX(x); t.setY(y); t.setZ(z);
-                if (coordTokens.size() >= 4) t.setWorld(coordTokens.get(3));
-                else if (sender instanceof Player) t.setWorld(((Player)sender).getWorld().getName());
-                else { sender.sendMessage(messages.getWithPrefix("") + "§cWorld required when run from console."); return; }
-            } catch (NumberFormatException ex) { sender.sendMessage(messages.getWithPrefix("") + "§cInvalid coordinate."); return; }
-        } else {
-            if (coordTokens.size() < 6) { sender.sendMessage(messages.getWithPrefix("") + "§cNot enough region coordinates."); return; }
-            try {
-                int x1 = Integer.parseInt(coordTokens.get(0));
-                int y1 = Integer.parseInt(coordTokens.get(1));
-                int z1 = Integer.parseInt(coordTokens.get(2));
-                int x2 = Integer.parseInt(coordTokens.get(3));
-                int y2 = Integer.parseInt(coordTokens.get(4));
-                int z2 = Integer.parseInt(coordTokens.get(5));
-                t.setType(Trigger.Type.REGION);
-                t.setX1(x1); t.setY1(y1); t.setZ1(z1);
-                t.setX2(x2); t.setY2(y2); t.setZ2(z2);
-                if (coordTokens.size() >= 7) t.setWorld(coordTokens.get(6));
-                else if (sender instanceof Player) t.setWorld(((Player)sender).getWorld().getName());
-                else { sender.sendMessage(messages.getWithPrefix("") + "§cWorld required when run from console."); return; }
-            } catch (NumberFormatException ex) { sender.sendMessage(messages.getWithPrefix("") + "§cInvalid coordinate."); return; }
+                if (mode.equals("on")) {
+                    t.setType(Trigger.Type.BLOCK);
+                    t.setX(Integer.parseInt(coordTokens.get(0)));
+                    t.setY(Integer.parseInt(coordTokens.get(1)));
+                    t.setZ(Integer.parseInt(coordTokens.get(2)));
+                    if (sender instanceof Player p) t.setWorld(p.getWorld().getName());
+                    else t.setWorld("world");
+                } else {
+                    t.setType(Trigger.Type.REGION);
+                    t.setX1(Integer.parseInt(coordTokens.get(0)));
+                    t.setY1(Integer.parseInt(coordTokens.get(1)));
+                    t.setZ1(Integer.parseInt(coordTokens.get(2)));
+                    t.setX2(Integer.parseInt(coordTokens.get(3)));
+                    t.setY2(Integer.parseInt(coordTokens.get(4)));
+                    t.setZ2(Integer.parseInt(coordTokens.get(5)));
+                    if (sender instanceof Player p) t.setWorld(p.getWorld().getName());
+                    else t.setWorld("world");
+                }
+            } catch (NumberFormatException ex) {
+                sender.sendMessage(messages.getWithPrefix("") + " §cInvalid coordinates.");
+                return;
+            }
         }
 
         t.setEnabled(true);
@@ -195,23 +230,15 @@ public class IfCommand implements CommandExecutor {
         t.setMessages(new HashMap<>());
 
         triggerManager.add(t);
-        Map<String,String> ph = new HashMap<>(); ph.put("name", t.getName());
+        Map<String,String> ph = new HashMap<>();
+        ph.put("name", t.getName());
         sendPref(sender, "trigger_created", ph);
-    }
-
-    private String generateName() {
-        int i=1;
-        while (true) {
-            String n = "trigger_" + i;
-            if (!triggerManager.exists(n)) return n;
-            i++;
-        }
     }
 
     // ---------- LIST ----------
     private void listAll(CommandSender sender) {
         Collection<Trigger> all = triggerManager.getAll();
-        sender.sendMessage(messages.getWithPrefix("list_header"));
+        sender.sendMessage(messages.getWithPrefix("") + " §6Trigger List:");
         if (all.isEmpty()) { sender.sendMessage("§7- §c(no triggers)"); return; }
         for (Trigger t : all) {
             TextComponent comp = new TextComponent("§7- §a[" + t.getName() + "]");
@@ -247,7 +274,7 @@ public class IfCommand implements CommandExecutor {
     private void handleRemove(CommandSender sender, String[] args) {
         if (!sender.hasPermission("ifexec.admin")) { sendPref(sender, "no_permission"); return; }
         if (args.length == 1) {
-            sender.sendMessage(messages.getWithPrefix("") + "§eClick a trigger below to remove it (Shift-Click to paste):");
+            sender.sendMessage(messages.getWithPrefix("") + " §eClick a trigger below to remove it (Shift-Click to paste):");
             for (Trigger t : triggerManager.getAll()) {
                 TextComponent comp = new TextComponent("§7- §c[" + t.getName() + "]");
                 comp.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/if remove " + t.getName()));
@@ -268,34 +295,32 @@ public class IfCommand implements CommandExecutor {
         Optional<Trigger> opt = triggerManager.get(name);
         if (opt.isEmpty()) { Map<String,String> ph = new HashMap<>(); ph.put("name", name); sendPref(sender, "no_trigger", ph); return; }
 
-        sender.sendMessage(messages.getWithPrefix("") + "§cAre you sure you want to remove trigger §f" + name + "§c?");
-        TextComponent confirm = new TextComponent("§7[Confirm]");
+        sender.sendMessage(messages.getWithPrefix("") + " §cAre you sure you want to remove trigger §f" + name + "§c?");
+        TextComponent confirm = new TextComponent("§a[Confirm] ");
         confirm.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/if remove confirm " + name));
         confirm.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Click to permanently delete " + name).create()));
-        TextComponent cancel = new TextComponent("§7[Cancel]");
-        cancel.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/if remove " + name));
+        TextComponent cancel = new TextComponent("§c[Cancel]");
+        cancel.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/if list"));
         cancel.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Click to cancel").create()));
-        sender.spigot().sendMessage(confirm);
-        sender.spigot().sendMessage(cancel);
+        sender.spigot().sendMessage(confirm, cancel);
     }
 
     private void doRemoveConfirmed(CommandSender sender, String name) {
         Optional<Trigger> opt = triggerManager.get(name);
         if (opt.isEmpty()) { Map<String,String> ph = new HashMap<>(); ph.put("name", name); sendPref(sender, "no_trigger", ph); return; }
         Trigger t = opt.get();
-        // push to undo with removing player's UUID (or null for console)
         UUID remover = (sender instanceof Player p) ? p.getUniqueId() : null;
         plugin.getUndoManager().push(remover, t);
         triggerManager.remove(name);
         Map<String,String> ph = new HashMap<>(); ph.put("name", name);
         sendPref(sender, "trigger_removed", ph);
-        sender.sendMessage(messages.getWithPrefix("") + "§7Type /if undo to restore. (expires in " + plugin.getConfigManager().getConfig().getInt("undo_timeout", 30) + "s)");
+        sender.sendMessage(messages.getWithPrefix("") + " §7Type /if undo to restore. (expires in " + plugin.getConfigManager().getConfig().getInt("undo_timeout", 30) + "s)");
     }
 
     // ---------- ENABLE/DISABLE ----------
     private void handleEnableDisable(CommandSender sender, String[] args, boolean enable) {
         if (!sender.hasPermission("ifexec.admin")) { sendPref(sender, "no_permission"); return; }
-        if (args.length < 2) { sender.sendMessage(messages.getWithPrefix("") + "§eUsage: /if " + (enable ? "enable <name>" : "disable <name>")); return; }
+        if (args.length < 2) { sender.sendMessage(messages.getWithPrefix("") + " §eUsage: /if " + (enable ? "enable <name>" : "disable <name>")); return; }
         String name = args[1];
         Optional<Trigger> opt = triggerManager.get(name);
         if (opt.isEmpty()) { Map<String,String> ph = new HashMap<>(); ph.put("name", name); sendPref(sender, "no_trigger", ph); return; }
@@ -308,7 +333,7 @@ public class IfCommand implements CommandExecutor {
     // ---------- EDIT ----------
     private void handleEdit(CommandSender sender, String[] args) {
         if (!sender.hasPermission("ifexec.admin")) { sendPref(sender, "no_permission"); return; }
-        if (args.length < 3) { sender.sendMessage(messages.getWithPrefix("") + "§eUsage: /if edit <name> <field> <value>"); return; }
+        if (args.length < 3) { sender.sendMessage(messages.getWithPrefix("") + " §eUsage: /if edit <name> <field> <value>"); return; }
         String name = args[1];
         String field = args[2].toLowerCase();
         Optional<Trigger> opt = triggerManager.get(name);
@@ -319,51 +344,51 @@ public class IfCommand implements CommandExecutor {
             switch (field) {
                 case "coords":
                     if (t.getType() == Trigger.Type.BLOCK) {
-                        if (args.length < 6) { sender.sendMessage(messages.getWithPrefix("") + "§cUsage: /if edit <name> coords <x> <y> <z> [world]"); return; }
+                        if (args.length < 6) { sender.sendMessage(messages.getWithPrefix("") + " §cUsage: /if edit <name> coords <x> <y> <z> [world]"); return; }
                         t.setX(Integer.parseInt(args[3])); t.setY(Integer.parseInt(args[4])); t.setZ(Integer.parseInt(args[5]));
                         if (args.length >= 7) t.setWorld(args[6]);
                     } else {
-                        if (args.length < 9) { sender.sendMessage(messages.getWithPrefix("") + "§cUsage: /if edit <name> coords <x1> <y1> <z1> <x2> <y2> <z2> [world]"); return; }
+                        if (args.length < 9) { sender.sendMessage(messages.getWithPrefix("") + " §cUsage: /if edit <name> coords <x1> <y1> <z1> <x2> <y2> <z2> [world]"); return; }
                         t.setX1(Integer.parseInt(args[3])); t.setY1(Integer.parseInt(args[4])); t.setZ1(Integer.parseInt(args[5]));
                         t.setX2(Integer.parseInt(args[6])); t.setY2(Integer.parseInt(args[7])); t.setZ2(Integer.parseInt(args[8]));
                         if (args.length >= 10) t.setWorld(args[9]);
                     }
                     break;
                 case "role":
-                    if (args.length < 4) { sender.sendMessage(messages.getWithPrefix("") + "§cUsage: /if edit <name> role <staff|all>"); return; }
+                    if (args.length < 4) { sender.sendMessage(messages.getWithPrefix("") + " §cUsage: /if edit <name> role <staff|all>"); return; }
                     String r = args[3].toLowerCase();
                     if (!r.equals("staff") && !r.equals("all")) r = "all";
                     t.setRole(r);
                     break;
                 case "command":
                 case "commands":
-                    if (args.length < 4) { sender.sendMessage(messages.getWithPrefix("") + "§cUsage: /if edit <name> command <cmd1>; <cmd2>; ..."); return; }
-                    String joined = String.join(" ", Arrays.copyOfRange(args,3,args.length));
+                    if (args.length < 4) { sender.sendMessage(messages.getWithPrefix("") + " §cUsage: /if edit <name> command <cmd1>; <cmd2>; ..."); return; }
+                    String joined = String.join(" ", Arrays.copyOfRange(args, 3, args.length));
                     List<String> cmds = Arrays.stream(joined.split(";")).map(this::stripQuotes).filter(s -> !s.isBlank()).collect(Collectors.toList());
-                    if (cmds.isEmpty()) { sender.sendMessage(messages.getWithPrefix("") + "§cNo commands provided."); return; }
+                    if (cmds.isEmpty()) { sender.sendMessage(messages.getWithPrefix("") + " §cNo commands provided."); return; }
                     t.setCommands(cmds);
                     break;
                 case "cooldown":
-                    if (args.length < 4) { sender.sendMessage(messages.getWithPrefix("") + "§cUsage: /if edit <name> cooldown <seconds>"); return; }
+                    if (args.length < 4) { sender.sendMessage(messages.getWithPrefix("") + " §cUsage: /if edit <name> cooldown <seconds>"); return; }
                     t.setCooldown(Integer.parseInt(args[3]));
                     break;
                 case "silent":
-                    if (args.length < 4) { sender.sendMessage(messages.getWithPrefix("") + "§cUsage: /if edit <name> silent <true|false>"); return; }
+                    if (args.length < 4) { sender.sendMessage(messages.getWithPrefix("") + " §cUsage: /if edit <name> silent <true|false>"); return; }
                     t.setSilent(Boolean.parseBoolean(args[3]));
                     break;
                 case "message":
-                    if (args.length < 5) { sender.sendMessage(messages.getWithPrefix("") + "§cUsage: /if edit <name> message <all|staff> \"<text>\""); return; }
+                    if (args.length < 5) { sender.sendMessage(messages.getWithPrefix("") + " §cUsage: /if edit <name> message <all|staff> \"<text>\""); return; }
                     String target = args[3].toLowerCase();
                     String msg = String.join(" ", Arrays.copyOfRange(args, 4, args.length));
                     if (msg.startsWith("\"") && msg.endsWith("\"") && msg.length() >= 2) msg = msg.substring(1, msg.length()-1);
                     Map<String,String> mm = t.getMessages(); mm.put(target, msg); t.setMessages(mm);
                     break;
                 default:
-                    sender.sendMessage(messages.getWithPrefix("") + "§cUnknown field: " + field);
+                    sender.sendMessage(messages.getWithPrefix("") + " §cUnknown field: " + field);
                     return;
             }
         } catch (NumberFormatException ex) {
-            sender.sendMessage(messages.getWithPrefix("") + "§cInvalid number.");
+            sender.sendMessage(messages.getWithPrefix("") + " §cInvalid number.");
             return;
         }
 
@@ -386,7 +411,7 @@ public class IfCommand implements CommandExecutor {
     }
 
     private String stripQuotes(String s) {
-        if (s.startsWith("\"") && s.endsWith("\"") && s.length()>=2) return s.substring(1,s.length()-1);
+        if (s.startsWith("\"") && s.endsWith("\"") && s.length() >= 2) return s.substring(1, s.length() - 1);
         return s;
     }
 }
