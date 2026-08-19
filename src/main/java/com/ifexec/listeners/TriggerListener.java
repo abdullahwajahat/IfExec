@@ -5,6 +5,7 @@ import com.ifexec.manager.Messages;
 import com.ifexec.manager.TriggerManager;
 import com.ifexec.model.Trigger;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -57,26 +58,32 @@ public class TriggerListener implements Listener {
                 continue;
             }
 
-            // execute commands
-            for (String raw : t.getCommands()) {
-                if (raw == null || raw.isBlank()) continue;
-                String cmd = raw.replace("@p", p.getName()).replace("@s", p.getName());
-                if (cmd.contains("@a")) {
-                    for (Player pl : Bukkit.getOnlinePlayers()) {
-                        String forCmd = cmd.replace("@a", pl.getName());
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), forCmd);
+            // execute commands without logging to console
+            IfExec.isDispatching = true;
+            try {
+                for (String raw : t.getCommands()) {
+                    if (raw == null || raw.isBlank()) continue;
+                    String cmd = raw.replace("@p", p.getName()).replace("@s", p.getName());
+                    if (cmd.contains("@a")) {
+                        for (Player pl : Bukkit.getOnlinePlayers()) {
+                            String forCmd = cmd.replace("@a", pl.getName());
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), forCmd);
+                        }
+                    } else {
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
                     }
-                } else {
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
                 }
-                if (!t.isSilent()) {
-                    String sendMsg = null;
-                    if (p.hasPermission("ifexec.staff") && t.getMessages().containsKey("staff")) sendMsg = t.getMessages().get("staff");
-                    if (sendMsg == null && t.getMessages().containsKey("all")) sendMsg = t.getMessages().get("all");
-                    if (sendMsg == null) sendMsg = messages.get("trigger_executed");
-                    sendMsg = sendMsg.replace("{name}", t.getName()).replace("{player}", p.getName());
-                    p.sendMessage(messages.getWithPrefix("") + " " + org.bukkit.ChatColor.translateAlternateColorCodes('&', sendMsg));
-                }
+            } finally {
+                IfExec.isDispatching = false;
+            }
+
+            if (!t.isSilent()) {
+                String sendMsg = null;
+                if (p.hasPermission("ifexec.staff") && t.getMessages().containsKey("staff")) sendMsg = t.getMessages().get("staff");
+                if (sendMsg == null && t.getMessages().containsKey("all")) sendMsg = t.getMessages().get("all");
+                if (sendMsg == null) sendMsg = messages.get("trigger_executed");
+                sendMsg = sendMsg.replace("{name}", t.getName()).replace("{player}", p.getName());
+                p.sendMessage(messages.getWithPrefix("") + " " + ChatColor.translateAlternateColorCodes('&', sendMsg));
             }
 
             t.setTriggered(p.getUniqueId());
