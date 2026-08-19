@@ -354,6 +354,10 @@ public class IfCommand implements CommandExecutor {
                         if (args.length >= 10) t.setWorld(args[9]);
                     }
                     break;
+                case "world":
+                    if (args.length < 4) { sender.sendMessage(messages.getWithPrefix("") + " §cUsage: /if edit <name> world <worldname>"); return; }
+                    t.setWorld(args[3]);
+                    break;
                 case "role":
                     if (args.length < 4) { sender.sendMessage(messages.getWithPrefix("") + " §cUsage: /if edit <name> role <staff|all>"); return; }
                     String r = args[3].toLowerCase();
