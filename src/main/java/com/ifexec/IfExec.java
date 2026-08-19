@@ -9,9 +9,14 @@ import com.ifexec.manager.TriggerManager;
 import com.ifexec.manager.UndoManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.logging.Filter;
+import java.util.logging.Logger;
+
 public final class IfExec extends JavaPlugin {
 
     private static IfExec instance;
+    public static volatile boolean isDispatching = false;
+
     private ConfigManager configManager;
     private Messages messages;
     private TriggerManager triggerManager;
@@ -20,6 +25,18 @@ public final class IfExec extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+
+        // Filter out console logs when trigger commands are being dispatched
+        try {
+            Logger rootLogger = Logger.getLogger("");
+            Filter previousFilter = rootLogger.getFilter();
+            rootLogger.setFilter(record -> {
+                if (isDispatching && record.getMessage() != null && record.getMessage().toLowerCase().contains("issued server command")) {
+                    return false;
+                }
+                return previousFilter == null || previousFilter.isLoggable(record);
+            });
+        } catch (Exception ignored) {}
 
         saveDefaultConfig();
         saveResource("messages.yml", false);
