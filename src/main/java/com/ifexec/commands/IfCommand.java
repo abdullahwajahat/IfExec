@@ -70,8 +70,8 @@ public class IfCommand implements CommandExecutor {
                     handleEnableDisable(sender, args, true);
                     break;
                 case "reload":
-                    plugin.getConfig().options().copyDefaults(true);
-                    plugin.getConfigManager().saveConfig();
+                    // Properly reload the config from the disk
+                    plugin.getConfigManager().reloadConfig();
                     plugin.getMessages().reload();
                     plugin.getTriggerManager().loadAll();
                     sendPref(sender, "reload_success");
