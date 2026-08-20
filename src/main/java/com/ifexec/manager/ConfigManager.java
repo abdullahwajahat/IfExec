@@ -20,6 +20,12 @@ public class ConfigManager {
 
     public YamlConfiguration getConfig() { return dataConfig; }
 
+    // Re-reads the file from disk, applying manual edits to the server's memory
+    public void reloadConfig() {
+        if (!dataFile.exists()) plugin.saveResource("config.yml", false);
+        dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+    }
+
     public void saveConfig() {
         try {
             dataConfig.save(dataFile);
