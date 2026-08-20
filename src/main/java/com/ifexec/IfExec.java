@@ -9,8 +9,10 @@ import com.ifexec.manager.TriggerManager;
 import com.ifexec.manager.UndoManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.logging.Filter;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.core.filter.AbstractFilter;
 
 public final class IfExec extends JavaPlugin {
 
@@ -26,18 +28,22 @@ public final class IfExec extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // Aggressively filter out ALL console logs while trigger commands are being dispatched
+        // Apply Log4j2 filter to catch ALL server logs (including vanilla/essentials messages)
         try {
-            Logger rootLogger = Logger.getLogger("");
-            Filter previousFilter = rootLogger.getFilter();
-            rootLogger.setFilter(record -> {
-                // If the plugin is currently running a command, block the log from printing
-                if (isDispatching) {
-                    return false;
+            Logger rootLogger = (Logger) LogManager.getRootLogger();
+            rootLogger.addFilter(new AbstractFilter() {
+                @Override
+                public Result filter(LogEvent event) {
+                    // If this plugin is currently dispatching a command, block the output entirely
+                    if (isDispatching) {
+                        return Result.DENY; 
+                    }
+                    return Result.NEUTRAL;
                 }
-                return previousFilter == null || previousFilter.isLoggable(record);
             });
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            getLogger().warning("Failed to apply Log4j2 filter. Console logs may still appear.");
+        }
 
         saveDefaultConfig();
         saveResource("messages.yml", false);
